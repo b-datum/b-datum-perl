@@ -65,7 +65,16 @@ sub send {
     $key =~ s/\/+/\//g; # troca varias barras por uma
     $key =~ s/^\///; # tira barras do começo
 
+    open(my $fh, '<:raw', $params{file});
 
+    my $res = $self->_http_req(
+        method  => 'PUT',
+        url     => 'https://api.b-datum.com/storage/' . $key,
+        headers => [$self->_get_headers],
+        body    => $fh
+    );
+
+    use DDP; p $res;
 }
 
 sub download {
@@ -84,9 +93,14 @@ sub info {
 
 }
 
+sub _get_headers {
+    my ($self) = @_;
+    return ('Authorization', 'Basic ' . $self->_get_token . '==');
+}
+
 sub _get_token {
     my ($self) = @_;
-    return encode_base64($self->node_key . ':' . $self->partner_key);
+    return MIME::Base64::encode_base64url( $self->node_key . ':' . $self->partner_key );
 }
 
 =pod
@@ -114,7 +128,8 @@ sub _http_req {
         $res = $self->furl->put(
             $args{url},
             $args{headers},
-            $args{body}
+            $args{body},
+
         );
     }elsif ($method =~ /^delete/o){
         $res = $self->furl->delete(
@@ -128,12 +143,8 @@ sub _http_req {
     my $test = $res->content;
 
     my $ret  = eval{decode_json $test};
-    return { fatal_error => "JSON DECODE ERROR $@", status_code => $res->status } if $@;
-    return {
-        fatal_error => $res->status_line,
-        status_code => $res->status,
-        object      => $ret
-    } if !$res->is_success;
+
+    return { error => "$test $@", status_code => $res->status } if $@;
 
     return $ret;
 }
