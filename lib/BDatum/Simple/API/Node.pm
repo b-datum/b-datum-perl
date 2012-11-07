@@ -1,10 +1,12 @@
 package BDatum::Simple::API::Node;
 use utf8;
+use strict;
 use Moose;
 use Carp;
 use File::Spec;
 use File::Basename;
 use MIME::Base64;
+
 
 use Furl;
 
@@ -66,11 +68,12 @@ sub send {
     $key =~ s/^\///; # tira barras do começo
 
     open(my $fh, '<:raw', $params{file});
+    use File::MimeInfo::Magic;
 
     my $res = $self->_http_req(
         method  => 'PUT',
         url     => 'https://api.b-datum.com/storage/' . $key,
-        headers => [$self->_get_headers],
+        headers => [$self->_get_headers, 'Content-Type' => mimetype($params{file})],
         body    => $fh
     );
 
@@ -90,6 +93,22 @@ sub list {
 }
 
 sub info {
+    my ($self, %params) = @_;
+
+    croak "$params{key} precisa existir" unless -e $params{key};
+
+    my $key = $params{key};
+
+    $key =~ s/^\\/\//g; # troca barra de windows por barras de linux
+    $key =~ s/\/+/\//g; # troca varias barras por uma
+    $key =~ s/^\///; # tira barras do começo
+
+    my $res = $self->_http_req(
+        method  => 'HEAD',
+        url     => 'https://api.b-datum.com/storage/' . $key,
+        headers => [$self->_get_headers]
+    );
+    use DDP; p $res;
 
 }
 
@@ -118,6 +137,11 @@ sub _http_req {
             $args{url},
             $args{headers}
         );
+    }elsif ($method =~ /^head/o){
+        $res = $self->furl->get(
+            $args{url},
+            $args{headers}
+        );
     }elsif ($method =~ /^post/o){
         $res = $self->furl->post(
             $args{url},
@@ -125,12 +149,13 @@ sub _http_req {
             $args{body}
         );
     }elsif ($method =~ /^put/o){
+
         $res = $self->furl->put(
             $args{url},
             $args{headers},
-            $args{body},
-
+            $args{body}
         );
+
     }elsif ($method =~ /^delete/o){
         $res = $self->furl->delete(
             $args{url},
@@ -141,6 +166,7 @@ sub _http_req {
     }
 
     my $test = $res->content;
+    return undef if (!$test && $res->is_success);
 
     my $ret  = eval{decode_json $test};
 
