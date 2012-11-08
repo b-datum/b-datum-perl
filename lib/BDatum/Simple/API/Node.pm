@@ -295,3 +295,67 @@ sub _http_req {
 }
 
 1;
+
+__END__
+
+=pod
+
+=encoding utf-8
+
+=head1 NAME
+
+BDatum::Simple::API::Node
+
+=head1 VERSION
+
+version 0.1
+
+=head1 SYNOPSIS
+
+    use BDatum::Simple::API::Node;
+
+    my $node = BDatum::Simple::API::Node->new(
+        partner_key => 'XXXXXXXXXXXX',
+        node_key    => 'YYYYYYYYYYYY'
+    );
+
+    $node->send(
+        file => $Bin . '/../etc/frutas.txt',
+        path => '/'
+    );
+
+    $node->download(
+        key => 'some_file.txt'
+    );
+
+    $node->info(
+        key => 'some_file.txt'
+    );
+
+    $node->delete(
+        key => 'some_file.txt'
+    );
+
+    $node->list(
+        path => '/path/to/somewhere'
+    );
+
+=head1 DESCRIPTION
+
+Este modulo foi criado para utilizar a interface REST da b-datum de arquivos (API para os pontos)
+
+Exemplos e casos de uso em <http://docs.b-datum.com/pt/casos-de-uso-e-exemplos/perl.html>
+
+=head1 AUTHOR
+
+Renato Cron <renato@aware.com.br>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2012 by Aware TI <http://www.aware.com.br>.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
+
