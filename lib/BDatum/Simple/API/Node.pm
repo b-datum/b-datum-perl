@@ -56,6 +56,7 @@ sub send {
         croak "Você esta tentando enviar o arquivo sem definir o path" unless (defined $self->base_path);
 
         $key = File::Spec->abs2rel( $params{file}, $self->base_path ) ;
+        croak "Você está enviando o arquivo no caminho correto? $key nao parece ser valido." if $key =~ /\.\./;
     }else{
         $key = File::Spec->catfile(
                 File::Spec->canonpath($params{path}),
@@ -69,7 +70,6 @@ sub send {
 
     open(my $fh, '<:raw', $params{file});
 
-
     my $res = $self->_http_req(
         method  => 'PUT',
         url     => 'https://api.b-datum.com/storage/' . $key,
@@ -79,8 +79,15 @@ sub send {
 
     close $fh;
 
-    return { error => "$res->{status} não esperado!" } if $res->{status} != 200 && $res->{status} != 204;
+    return {
+        error => "$res->{status} não esperado!",
+        res => $res
+    } if $res->{status} != 200 && $res->{status} != 204;
     return $res if exists $res->{error};
+
+    if ($res->{status} == 204){
+        return $self->info(key => $key);
+    }
 
     return {
         name         => $res->{headers}{'content-disposition'},
@@ -147,6 +154,7 @@ sub _get_token {
 }
 
 =pod
+
     funcoes ~feias~ vão para o final do codigo
 
 =cut
@@ -186,11 +194,8 @@ sub _http_req {
             $args{headers}
         );
     }else{
-        die('not supported method');
+        Carp::confess "not supported method";
     }
-
-    my $x = $res->headers;
-    use DDP; p $x;
 
     return {
         content => $res->content,

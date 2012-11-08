@@ -17,8 +17,25 @@ my $res = $node->send(
     file => $Bin . '/../etc/frutas.txt',
     path => '/'
 );
-use DDP;
- p $res;
+is($res->{name}, 'frutas.txt', 'name ok');
+ok($res->{etag}, 'etag ok');
+ok($res->{version}, 'version ok');
+ok($res->{size}, 'size ok');
+
+eval{$node->send(
+    file => $Bin . '/../etc/frutas.txt'
+)};
+like($@, qr|sem definir o path|, 'error is ok!');
+
+$node->base_path($Bin . '/../etc');
+
+my $res = $node->send(
+    file => $Bin . '/../etc/frutas.txt'
+);
+is($res->{name}, 'frutas.txt', 'name ok');
+ok($res->{etag}, 'etag ok');
+ok($res->{version}, 'version ok');
+ok($res->{size}, 'size ok');
 
 
 done_testing();
