@@ -96,7 +96,7 @@ sub send {
         headers => [
             $self->_get_headers,
             'content-type' => mimetype($params{file}),
-            'x-md5'        => $md5
+            'etag'        => $md5
         ],
         body    => $fh
     );
