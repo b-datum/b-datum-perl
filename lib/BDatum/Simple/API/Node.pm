@@ -6,7 +6,7 @@ use Carp;
 use File::Spec;
 use File::Basename;
 use MIME::Base64;
-
+use File::MimeInfo::Magic;
 
 use Furl;
 
@@ -68,16 +68,28 @@ sub send {
     $key =~ s/^\///; # tira barras do começo
 
     open(my $fh, '<:raw', $params{file});
-    use File::MimeInfo::Magic;
+
 
     my $res = $self->_http_req(
         method  => 'PUT',
         url     => 'https://api.b-datum.com/storage/' . $key,
-        headers => [$self->_get_headers, 'Content-Type' => mimetype($params{file})],
+        headers => [$self->_get_headers, 'content-type' => mimetype($params{file})],
         body    => $fh
     );
 
-    use DDP; p $res;
+    close $fh;
+
+    return { error => "$res->{status} não esperado!" } if $res->{status} != 200 && $res->{status} != 204;
+    return $res if exists $res->{error};
+
+    return {
+        name         => $res->{headers}{'content-disposition'},
+        content_type => $res->{headers}{'content-type'},
+        size         => $res->{headers}{'content-length'},
+        version      => $res->{headers}{'x-meta-b-datum-version'},
+        etag         => $res->{headers}{'etag'},
+        headers      => $res->{headers}
+    };
 }
 
 sub download {
@@ -89,13 +101,15 @@ sub delete {
 }
 
 sub list {
+    my ($self, %params) = @_;
+
+  #  my $ret  = eval{decode_json $test};
+  #  return { error => "$test $@", status_code => $res->status } if $@;
 
 }
 
 sub info {
     my ($self, %params) = @_;
-
-    croak "$params{key} precisa existir" unless -e $params{key};
 
     my $key = $params{key};
 
@@ -108,8 +122,18 @@ sub info {
         url     => 'https://api.b-datum.com/storage/' . $key,
         headers => [$self->_get_headers]
     );
-    use DDP; p $res;
 
+    return { error => "404" } if $res->{status} == 404;
+    return $res if exists $res->{error};
+
+    return {
+        name         => $res->{headers}{'content-disposition'},
+        content_type => $res->{headers}{'content-type'},
+        size         => $res->{headers}{'content-length'},
+        version      => $res->{headers}{'x-meta-b-datum-version'},
+        etag         => $res->{headers}{'etag'},
+        headers      => $res->{headers}
+    };
 }
 
 sub _get_headers {
@@ -165,14 +189,14 @@ sub _http_req {
         die('not supported method');
     }
 
-    my $test = $res->content;
-    return undef if (!$test && $res->is_success);
+    my $x = $res->headers;
+    use DDP; p $x;
 
-    my $ret  = eval{decode_json $test};
-
-    return { error => "$test $@", status_code => $res->status } if $@;
-
-    return $ret;
+    return {
+        content => $res->content,
+        headers => {$res->headers->flatten},
+        status  => $res->status
+    };
 }
 
 1;

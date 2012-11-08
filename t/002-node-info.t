@@ -14,7 +14,7 @@ my $node = BDatum::Simple::API::Node->new(
 );
 
 my $res = $node->info(
-    key => '/'
+    key => '/frutas.txt'
 );
 use DDP;
  p $res;
