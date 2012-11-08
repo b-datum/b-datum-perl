@@ -8,6 +8,8 @@ use File::Basename;
 use MIME::Base64;
 use File::MimeInfo::Magic;
 
+use Digest::MD5;
+
 use Furl;
 
 use JSON::XS;
@@ -30,6 +32,14 @@ has 'base_path' => (
     is => 'rw',
     isa => 'Str',
 );
+
+has 'info_overhead' => (
+    is => 'rw',
+    isa => 'Int',
+    default => sub {200} # 200 bytes
+);
+
+
 
 
 has furl => (
@@ -69,11 +79,25 @@ sub send {
     $key =~ s/^\///; # tira barras do começo
 
     open(my $fh, '<:raw', $params{file});
+    my $md5 = Digest::MD5->new->addfile(*$fh)->hexdigest;
+    seek($fh, 0, 0);
+
+    # antes depois de XX bytes, nao precisa verificar o head..
+    # mais eficiente enviar do que baixar head [http overhead] + enviar
+    if (-s $params{file} > $self->info_overhead){
+        my $info = $self->info(key => $key);
+        # nao precisa enviar o arquivo
+        return $info if (exists $info->{etag} && $info->{etag} eq $md5);
+    }
 
     my $res = $self->_http_req(
         method  => 'PUT',
         url     => 'https://api.b-datum.com/storage/' . $key,
-        headers => [$self->_get_headers, 'content-type' => mimetype($params{file})],
+        headers => [
+            $self->_get_headers,
+            'content-type' => mimetype($params{file}),
+            'x-md5'        => $md5
+        ],
         body    => $fh
     );
 
