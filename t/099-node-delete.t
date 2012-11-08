@@ -13,25 +13,16 @@ my $node = BDatum::Simple::API::Node->new(
     node_key    => 'ALThcI8EWJOPHeoP01mz'
 );
 
-my $res = $node->info(
-    key => '/frutas.txt'
+my $res = $node->delete(
+    key => 'frutas.txt'
 );
 
 is($res->{name}, 'frutas.txt', 'name ok');
 ok($res->{etag}, 'etag ok');
+is($res->{deleted}, 1, 'deleted ok');
 ok($res->{version}, 'version ok');
-ok($res->{size}, 'size ok');
 ok($res->{content_type}, 'content_type ok');
 
 
-$res = $node->info(
-    key => '/frutas404.txt'
-);
-is($res->{error}, 404, '404 erro');
-
-$res = $node->info(
-    key => '/'
-);
-is($res->{error}, 404, '404 erro');
 
 done_testing();

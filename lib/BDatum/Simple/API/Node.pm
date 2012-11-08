@@ -92,7 +92,6 @@ sub send {
     return {
         name         => $res->{headers}{'content-disposition'},
         content_type => $res->{headers}{'content-type'},
-        size         => $res->{headers}{'content-length'},
         version      => $res->{headers}{'x-meta-b-datum-version'},
         etag         => $res->{headers}{'etag'},
         headers      => $res->{headers}
@@ -100,19 +99,108 @@ sub send {
 }
 
 sub download {
+    my ($self, %params) = @_;
 
+    my $key = $params{key};
+
+    $key =~ s/^\\/\//g; # troca barra de windows por barras de linux
+    $key =~ s/\/+/\//g; # troca varias barras por uma
+    $key =~ s/^\///; # tira barras do começo
+
+    return { error => "404" } unless $key; # para nao retornar o json do list!
+
+    my $res = $self->_http_req(
+        method  => 'GET',
+        url     => 'https://api.b-datum.com/storage/' . $key,
+        headers => [$self->_get_headers]
+    );
+
+    return { error => "404", res => $res } if $res->{status} == 404;
+    return {
+        error => "$res->{status} não esperado!",
+        res => $res
+    } if $res->{status} != 200;
+
+    return $res if exists $res->{error};
+
+    if ($params{file}){
+        open (my $fh, '>:raw', $params{file}) or croak "Cannot open file $params{file} $!";
+        print $fh $res->{content};
+        close($fh);
+    }
+    return {
+        name         => $res->{headers}{'content-disposition'},
+        content_type => $res->{headers}{'content-type'},
+        version      => $res->{headers}{'x-meta-b-datum-version'},
+        etag         => $res->{headers}{'etag'},
+        deleted      => $res->{headers}{'x-meta-b-datum-delete'},
+        headers      => $res->{headers},
+
+        ($params{file} ? () : ( content => $res->{content} ) )
+
+    };
 }
 
 sub delete {
+    my ($self, %params) = @_;
 
+    my $key = $params{key};
+
+    $key =~ s/^\\/\//g; # troca barra de windows por barras de linux
+    $key =~ s/\/+/\//g; # troca varias barras por uma
+    $key =~ s/^\///; # tira barras do começo
+
+    return { error => "404" } unless $key; # para nao retornar o json do list!
+
+    my $res = $self->_http_req(
+        method  => 'DELETE',
+        url     => 'https://api.b-datum.com/storage/' . $key,
+        headers => [$self->_get_headers]
+    );
+
+    return { error => "404", res => $res } if $res->{status} == 404;
+    return {
+        error => "$res->{status} não esperado!",
+        res => $res
+    } if $res->{status} != 410;
+
+    return $res if exists $res->{error};
+
+    return {
+        name         => $res->{headers}{'content-disposition'},
+        content_type => $res->{headers}{'content-type'},
+        version      => $res->{headers}{'x-meta-b-datum-version'},
+        etag         => $res->{headers}{'etag'},
+        deleted      => $res->{headers}{'x-meta-b-datum-delete'},
+        headers      => $res->{headers},
+    };
 }
 
 sub list {
     my ($self, %params) = @_;
+    my $key = $params{path};
 
-  #  my $ret  = eval{decode_json $test};
-  #  return { error => "$test $@", status_code => $res->status } if $@;
+    if ($key){
+        $key =~ s/^\\/\//g; # troca barra de windows por barras de linux
+        $key =~ s/\/+/\//g; # troca varias barras por uma
+        $key =~ s/^\///; # tira barras do começo
+    }
 
+    my $path_var = $key ? '?path=' . $key : '';
+
+    my $res = $self->_http_req(
+        method  => 'GET',
+        url     => 'https://api.b-datum.com/storage' . $path_var,
+        headers => [$self->_get_headers]
+    );
+
+    return { error => "404", res => $res } if $res->{status} == 404;
+    return $res if exists $res->{error};
+
+    my $obj = eval{decode_json $res->{content}};
+    return { error => "$@", res => $res } if $@;
+
+    return $obj;
 }
 
 sub info {
@@ -124,13 +212,15 @@ sub info {
     $key =~ s/\/+/\//g; # troca varias barras por uma
     $key =~ s/^\///; # tira barras do começo
 
+    return { error => "404" } unless $key; # para nao retornar o json do list!
+
     my $res = $self->_http_req(
         method  => 'HEAD',
         url     => 'https://api.b-datum.com/storage/' . $key,
         headers => [$self->_get_headers]
     );
 
-    return { error => "404" } if $res->{status} == 404;
+    return { error => "404", res => $res } if $res->{status} == 404;
     return $res if exists $res->{error};
 
     return {
