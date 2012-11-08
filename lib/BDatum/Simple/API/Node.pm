@@ -109,9 +109,14 @@ sub download {
 
     return { error => "404" } unless $key; # para nao retornar o json do list!
 
+    my $param_url = '';
+    if ($params{version}){
+        $param_url .= '?version='.$params{version};
+    }
+
     my $res = $self->_http_req(
         method  => 'GET',
-        url     => 'https://api.b-datum.com/storage/' . $key,
+        url     => 'https://api.b-datum.com/storage/' . $key . $param_url,
         headers => [$self->_get_headers]
     );
 
@@ -133,7 +138,6 @@ sub download {
         content_type => $res->{headers}{'content-type'},
         version      => $res->{headers}{'x-meta-b-datum-version'},
         etag         => $res->{headers}{'etag'},
-        deleted      => $res->{headers}{'x-meta-b-datum-delete'},
         headers      => $res->{headers},
 
         ($params{file} ? () : ( content => $res->{content} ) )
@@ -184,6 +188,9 @@ sub list {
         $key =~ s/^\\/\//g; # troca barra de windows por barras de linux
         $key =~ s/\/+/\//g; # troca varias barras por uma
         $key =~ s/^\///; # tira barras do começo
+        $key =~ s/\/$//; # tira barras do final
+
+        $key .= '/'; # certeza que termina com barra no final!
     }
 
     my $path_var = $key ? '?path=' . $key : '';

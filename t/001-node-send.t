@@ -15,8 +15,9 @@ my $node = BDatum::Simple::API::Node->new(
 
 my $res = $node->send(
     file => $Bin . '/../etc/frutas.txt',
-    path => '/'
+    path => '/perl/'
 );
+
 is($res->{name}, 'frutas.txt', 'name ok');
 ok($res->{etag}, 'etag ok');
 ok($res->{version}, 'version ok');

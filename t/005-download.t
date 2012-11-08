@@ -15,7 +15,8 @@ my $node = BDatum::Simple::API::Node->new(
 );
 
 my $res = $node->download(
-    key => 'frutas.txt'
+    key => 'perl/frutas.txt',
+    version => 1
 );
 
 is($res->{name}, 'frutas.txt', 'name ok');

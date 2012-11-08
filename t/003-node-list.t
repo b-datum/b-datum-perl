@@ -16,6 +16,11 @@ my $node = BDatum::Simple::API::Node->new(
 my $res = $node->list();
 
 ok($res->{objects}, 'tem objetos');
-is($res->{objects}{fruta}{type}, 'file', 'frutas.txt presente');
+is($res->{objects}{'frutas.txt'}{type}, 'file', 'frutas.txt presente');
+
+$res = $node->list( path => '/perl');
+
+ok($res->{objects}, 'tem objetos');
+is($res->{objects}{'frutas.txt'}{type}, 'file', 'frutas.txt presente');
 
 done_testing();
