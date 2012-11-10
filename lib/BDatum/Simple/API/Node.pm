@@ -1,17 +1,16 @@
 package BDatum::Simple::API::Node;
+
 use utf8;
 use strict;
+
 use Moose;
 use Carp;
 use File::Spec;
 use File::Basename;
 use MIME::Base64;
 use File::MimeInfo::Magic;
-
 use Digest::MD5;
-
 use Furl;
-
 use JSON::XS;
 use Encode qw(encode);
 
