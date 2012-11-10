@@ -5,14 +5,14 @@ use utf8;
 
 use FindBin qw($Bin);
 
-unless ( $ENV{'BDATUM_PATNER_KEY'} and $ENV{'BDATUM_NODE_KEY'} ) {
+unless ( $ENV{'BDATUM_PARTNER_KEY'} and $ENV{'BDATUM_NODE_KEY'} ) {
     plan skip_all => 'Testing this module for real costs money.';
 }
 
 use_ok('BDatum::Simple::API::Node');
 
 my $node = BDatum::Simple::API::Node->new(
-    partner_key => $ENV{'BDATUM_PATNER_KEY'},
+    partner_key => $ENV{'BDATUM_PARTNER_KEY'},
     node_key    => $ENV{'BDATUM_NODE_KEY'}
 );
 
