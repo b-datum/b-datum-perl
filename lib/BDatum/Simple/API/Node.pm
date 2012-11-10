@@ -75,9 +75,7 @@ sub send {
             basename( $params{file} ) );
     }
 
-    $key =~ s/^\\/\//g;    # troca barra de windows por barras de linux
-    $key =~ s/\/+/\//g;    # troca varias barras por uma
-    $key =~ s/^\///;       # tira barras do começo
+    $key = $self->_normalize_key($key);
 
     open( my $fh, '<:raw', $params{file} );
     my $md5 = Digest::MD5->new->addfile(*$fh)->hexdigest;
@@ -105,11 +103,13 @@ sub send {
 
     close $fh;
 
-    return {
+    if ($res->{status} != 200 && $res->{status} != 204) {
+        return {
         error => "$res->{status} não esperado!",
         res   => $res
       }
-      if $res->{status} != 200 && $res->{status} != 204;
+    }
+
     return $res if exists $res->{error};
 
     if ( $res->{status} == 204 ) {
@@ -128,12 +128,7 @@ sub send {
 sub download {
     my ( $self, %params ) = @_;
 
-    my $key = $params{key};
-
-    $key =~ s/^\\/\//g;    # troca barra de windows por barras de linux
-    $key =~ s/\/+/\//g;    # troca varias barras por uma
-    $key =~ s/^\///;       # tira barras do começo
-
+    my $key = $self->_normalize_key($params{key});
     return { error => "404" } unless $key;   # para nao retornar o json do list!
 
     my $param_url = '';
@@ -177,11 +172,7 @@ sub download {
 sub delete {
     my ( $self, %params ) = @_;
 
-    my $key = $params{key};
-
-    $key =~ s/^\\/\//g;    # troca barra de windows por barras de linux
-    $key =~ s/\/+/\//g;    # troca varias barras por uma
-    $key =~ s/^\///;       # tira barras do começo
+    my $key = $self->_normalize_key($params{key});
 
     return { error => "404" } unless $key;   # para nao retornar o json do list!
 
@@ -212,14 +203,11 @@ sub delete {
 
 sub list {
     my ( $self, %params ) = @_;
-    my $key = $params{path};
+    my $key = $self->_normalize_key($params{key});
 
     if ($key) {
-        $key =~ s/^\\/\//g;    # troca barra de windows por barras de linux
-        $key =~ s/\/+/\//g;    # troca varias barras por uma
-        $key =~ s/^\///;       # tira barras do começo
+        # TODO: Re-avaliar
         $key =~ s/\/$//;       # tira barras do final
-
         $key .= '/';           # certeza que termina com barra no final!
     }
 
@@ -243,11 +231,7 @@ sub list {
 sub info {
     my ( $self, %params ) = @_;
 
-    my $key = $params{key};
-
-    $key =~ s/^\\/\//g;    # troca barra de windows por barras de linux
-    $key =~ s/\/+/\//g;    # troca varias barras por uma
-    $key =~ s/^\///;       # tira barras do começo
+    my $key = $self->_normalize_key($params{key});
 
     return { error => "404" } unless $key;   # para nao retornar o json do list!
 
@@ -270,6 +254,15 @@ sub info {
     };
 }
 
+sub _normalize_key {
+    my ($self, $key) = @_;
+    return '' unless $key;
+    $key =~ s/^\\/\//g;    # invertendo barras padrão do SO Windows.
+    $key =~ s/\/+/\//g;    # troca varias barras por uma
+    $key =~ s/^\///;       # tira barras do começo
+    return $key;
+}
+
 sub _get_headers {
     my ($self) = @_;
     return ( 'Authorization', 'Basic ' . $self->_get_token . '==' );
@@ -280,12 +273,6 @@ sub _get_token {
     return MIME::Base64::encode_base64url(
         $self->node_key . ':' . $self->partner_key );
 }
-
-=pod
-
-    funcoes ~feias~ vão para o final do codigo
-
-=cut
 
 sub _http_req {
     my ( $self, %args ) = @_;

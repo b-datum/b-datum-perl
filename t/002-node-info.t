@@ -18,9 +18,9 @@ my $node = BDatum::Simple::API::Node->new(
 my $res = $node->info( key => '/frutas.txt' );
 
 is( $res->{name}, 'frutas.txt',                       'header: name' );
-is( $res->{etag}, 'd41d8cd98f00b204e9800998ecf8427e', 'header: tag' );
-is( $res->{size}, '3885',                             'header: size' );
-is( $res->{content_type}, 'text/html; charset=utf-8', 'header: content_type' );
+is( $res->{etag}, 'df6c5e71993e312fbfbefa7d81af1977', 'header: tag' );
+is( $res->{size}, '43',                               'header: size' );
+is( $res->{content_type}, 'text/plain', 'header: content_type' );
 
 ok( $res->{version}, 'header: version' );
 
