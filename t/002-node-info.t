@@ -17,11 +17,12 @@ my $node = BDatum::Simple::API::Node->new(
 
 my $res = $node->info( key => '/frutas.txt' );
 
-is( $res->{name}, 'frutas.txt', 'name ok' );
-ok( $res->{etag},         'etag ok' );
-ok( $res->{version},      'version ok' );
-ok( $res->{size},         'size ok' );
-ok( $res->{content_type}, 'content_type ok' );
+is( $res->{name}, 'frutas.txt',                       'header: name' );
+is( $res->{etag}, 'd41d8cd98f00b204e9800998ecf8427e', 'header: tag' );
+is( $res->{size}, '3885',                             'header: size' );
+is( $res->{content_type}, 'text/html; charset=utf-8', 'header: content_type' );
+
+ok( $res->{version}, 'header: version' );
 
 $res = $node->info( key => '/frutas404.txt' );
 is( $res->{error}, 404, '404 erro' );
