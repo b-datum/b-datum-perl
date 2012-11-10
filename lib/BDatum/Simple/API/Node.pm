@@ -16,78 +16,75 @@ use JSON::XS;
 use Encode qw(encode);
 
 has 'partner_key' => (
-    is => 'ro',
-    isa => 'Str',
+    is       => 'ro',
+    isa      => 'Str',
     required => 1
 );
 
 has 'node_key' => (
-    is => 'ro',
-    isa => 'Str',
+    is       => 'ro',
+    isa      => 'Str',
     required => 1
 );
 
-
 has 'base_path' => (
-    is => 'rw',
+    is  => 'rw',
     isa => 'Str',
 );
 
 has 'info_overhead' => (
-    is => 'rw',
-    isa => 'Int',
-    default => sub {200} # 200 bytes
+    is      => 'rw',
+    isa     => 'Int',
+    default => sub { 200 }    # 200 bytes
 );
 
-
-
-
 has furl => (
-    is => 'rw',
-    lazy => 1,
-    isa => 'Furl',
+    is      => 'rw',
+    lazy    => 1,
+    isa     => 'Furl',
     default => sub {
         return Furl->new(
-            agent => 'B-Datum partner',
+            agent   => 'B-Datum partner',
             timeout => 10000
         );
     },
 );
 
-
-
 sub send {
-    my ($self, %params) = @_;
+    my ( $self, %params ) = @_;
 
     croak "$params{file} precisa existir" unless -e $params{file};
 
     my $key;
-    if (!defined $params{path}){
-        croak "Você esta tentando enviar o arquivo sem definir o path" unless (defined $self->base_path);
+    if ( !defined $params{path} ) {
+        croak "Você esta tentando enviar o arquivo sem definir o path"
+          unless ( defined $self->base_path );
 
-        $key = File::Spec->abs2rel( $params{file}, $self->base_path ) ;
-        croak "Você está enviando o arquivo no caminho correto? $key nao parece ser valido." if $key =~ /\.\./;
-    }else{
-        $key = File::Spec->catfile(
-                File::Spec->canonpath($params{path}),
-                basename($params{file})
-        );
+        $key = File::Spec->abs2rel( $params{file}, $self->base_path );
+        croak
+"Você está enviando o arquivo no caminho correto? $key nao parece ser valido."
+          if $key =~ /\.\./;
+    }
+    else {
+        $key = File::Spec->catfile( File::Spec->canonpath( $params{path} ),
+            basename( $params{file} ) );
     }
 
-    $key =~ s/^\\/\//g; # troca barra de windows por barras de linux
-    $key =~ s/\/+/\//g; # troca varias barras por uma
-    $key =~ s/^\///; # tira barras do começo
+    $key =~ s/^\\/\//g;    # troca barra de windows por barras de linux
+    $key =~ s/\/+/\//g;    # troca varias barras por uma
+    $key =~ s/^\///;       # tira barras do começo
 
-    open(my $fh, '<:raw', $params{file});
+    open( my $fh, '<:raw', $params{file} );
     my $md5 = Digest::MD5->new->addfile(*$fh)->hexdigest;
-    seek($fh, 0, 0);
+    seek( $fh, 0, 0 );
 
     # antes depois de XX bytes, nao precisa verificar o head..
     # mais eficiente enviar do que baixar head [http overhead] + enviar
-    if (-s $params{file} > $self->info_overhead){
-        my $info = $self->info(key => $key);
+    if ( -s $params{file} > $self->info_overhead ) {
+        my $info = $self->info( key => $key );
+
         # nao precisa enviar o arquivo
-        return $info if (exists $info->{etag} && $info->{etag} eq $md5);
+        return $info if ( exists $info->{etag} && $info->{etag} eq $md5 );
     }
 
     my $res = $self->_http_req(
@@ -95,22 +92,23 @@ sub send {
         url     => 'https://api.b-datum.com/storage/' . $key,
         headers => [
             $self->_get_headers,
-            'content-type' => mimetype($params{file}),
-            'etag'        => $md5
+            'content-type' => mimetype( $params{file} ),
+            'etag'         => $md5
         ],
-        body    => $fh
+        body => $fh
     );
 
     close $fh;
 
     return {
         error => "$res->{status} não esperado!",
-        res => $res
-    } if $res->{status} != 200 && $res->{status} != 204;
+        res   => $res
+      }
+      if $res->{status} != 200 && $res->{status} != 204;
     return $res if exists $res->{error};
 
-    if ($res->{status} == 204){
-        return $self->info(key => $key);
+    if ( $res->{status} == 204 ) {
+        return $self->info( key => $key );
     }
 
     return {
@@ -123,37 +121,39 @@ sub send {
 }
 
 sub download {
-    my ($self, %params) = @_;
+    my ( $self, %params ) = @_;
 
     my $key = $params{key};
 
-    $key =~ s/^\\/\//g; # troca barra de windows por barras de linux
-    $key =~ s/\/+/\//g; # troca varias barras por uma
-    $key =~ s/^\///; # tira barras do começo
+    $key =~ s/^\\/\//g;    # troca barra de windows por barras de linux
+    $key =~ s/\/+/\//g;    # troca varias barras por uma
+    $key =~ s/^\///;       # tira barras do começo
 
-    return { error => "404" } unless $key; # para nao retornar o json do list!
+    return { error => "404" } unless $key;   # para nao retornar o json do list!
 
     my $param_url = '';
-    if ($params{version}){
-        $param_url .= '?version='.$params{version};
+    if ( $params{version} ) {
+        $param_url .= '?version=' . $params{version};
     }
 
     my $res = $self->_http_req(
         method  => 'GET',
         url     => 'https://api.b-datum.com/storage/' . $key . $param_url,
-        headers => [$self->_get_headers]
+        headers => [ $self->_get_headers ]
     );
 
     return { error => "404", res => $res } if $res->{status} == 404;
     return {
         error => "$res->{status} não esperado!",
-        res => $res
-    } if $res->{status} != 200;
+        res   => $res
+      }
+      if $res->{status} != 200;
 
     return $res if exists $res->{error};
 
-    if ($params{file}){
-        open (my $fh, '>:raw', $params{file}) or croak "Cannot open file $params{file} $!";
+    if ( $params{file} ) {
+        open( my $fh, '>:raw', $params{file} )
+          or croak "Cannot open file $params{file} $!";
         print $fh $res->{content};
         close($fh);
     }
@@ -164,33 +164,34 @@ sub download {
         etag         => $res->{headers}{'etag'},
         headers      => $res->{headers},
 
-        ($params{file} ? () : ( content => $res->{content} ) )
+        ( $params{file} ? () : ( content => $res->{content} ) )
 
     };
 }
 
 sub delete {
-    my ($self, %params) = @_;
+    my ( $self, %params ) = @_;
 
     my $key = $params{key};
 
-    $key =~ s/^\\/\//g; # troca barra de windows por barras de linux
-    $key =~ s/\/+/\//g; # troca varias barras por uma
-    $key =~ s/^\///; # tira barras do começo
+    $key =~ s/^\\/\//g;    # troca barra de windows por barras de linux
+    $key =~ s/\/+/\//g;    # troca varias barras por uma
+    $key =~ s/^\///;       # tira barras do começo
 
-    return { error => "404" } unless $key; # para nao retornar o json do list!
+    return { error => "404" } unless $key;   # para nao retornar o json do list!
 
     my $res = $self->_http_req(
         method  => 'DELETE',
         url     => 'https://api.b-datum.com/storage/' . $key,
-        headers => [$self->_get_headers]
+        headers => [ $self->_get_headers ]
     );
 
     return { error => "404", res => $res } if $res->{status} == 404;
     return {
         error => "$res->{status} não esperado!",
-        res => $res
-    } if $res->{status} != 410;
+        res   => $res
+      }
+      if $res->{status} != 410;
 
     return $res if exists $res->{error};
 
@@ -205,16 +206,16 @@ sub delete {
 }
 
 sub list {
-    my ($self, %params) = @_;
+    my ( $self, %params ) = @_;
     my $key = $params{path};
 
-    if ($key){
-        $key =~ s/^\\/\//g; # troca barra de windows por barras de linux
-        $key =~ s/\/+/\//g; # troca varias barras por uma
-        $key =~ s/^\///; # tira barras do começo
-        $key =~ s/\/$//; # tira barras do final
+    if ($key) {
+        $key =~ s/^\\/\//g;    # troca barra de windows por barras de linux
+        $key =~ s/\/+/\//g;    # troca varias barras por uma
+        $key =~ s/^\///;       # tira barras do começo
+        $key =~ s/\/$//;       # tira barras do final
 
-        $key .= '/'; # certeza que termina com barra no final!
+        $key .= '/';           # certeza que termina com barra no final!
     }
 
     my $path_var = $key ? '?path=' . $key : '';
@@ -222,33 +223,33 @@ sub list {
     my $res = $self->_http_req(
         method  => 'GET',
         url     => 'https://api.b-datum.com/storage' . $path_var,
-        headers => [$self->_get_headers]
+        headers => [ $self->_get_headers ]
     );
 
     return { error => "404", res => $res } if $res->{status} == 404;
     return $res if exists $res->{error};
 
-    my $obj = eval{decode_json $res->{content}};
+    my $obj = eval { decode_json $res->{content} };
     return { error => "$@", res => $res } if $@;
 
     return $obj;
 }
 
 sub info {
-    my ($self, %params) = @_;
+    my ( $self, %params ) = @_;
 
     my $key = $params{key};
 
-    $key =~ s/^\\/\//g; # troca barra de windows por barras de linux
-    $key =~ s/\/+/\//g; # troca varias barras por uma
-    $key =~ s/^\///; # tira barras do começo
+    $key =~ s/^\\/\//g;    # troca barra de windows por barras de linux
+    $key =~ s/\/+/\//g;    # troca varias barras por uma
+    $key =~ s/^\///;       # tira barras do começo
 
-    return { error => "404" } unless $key; # para nao retornar o json do list!
+    return { error => "404" } unless $key;   # para nao retornar o json do list!
 
     my $res = $self->_http_req(
         method  => 'HEAD',
         url     => 'https://api.b-datum.com/storage/' . $key,
-        headers => [$self->_get_headers]
+        headers => [ $self->_get_headers ]
     );
 
     return { error => "404", res => $res } if $res->{status} == 404;
@@ -266,12 +267,13 @@ sub info {
 
 sub _get_headers {
     my ($self) = @_;
-    return ('Authorization', 'Basic ' . $self->_get_token . '==');
+    return ( 'Authorization', 'Basic ' . $self->_get_token . '==' );
 }
 
 sub _get_token {
     my ($self) = @_;
-    return MIME::Base64::encode_base64url( $self->node_key . ':' . $self->partner_key );
+    return MIME::Base64::encode_base64url(
+        $self->node_key . ':' . $self->partner_key );
 }
 
 =pod
@@ -279,48 +281,37 @@ sub _get_token {
     funcoes ~feias~ vão para o final do codigo
 
 =cut
+
 sub _http_req {
     my ( $self, %args ) = @_;
 
     my $method = lc $args{method};
     my $res;
 
-    if ($method =~ /^get/o){
-        $res = $self->furl->get(
-            $args{url},
-            $args{headers}
-        );
-    }elsif ($method =~ /^head/o){
-        $res = $self->furl->get(
-            $args{url},
-            $args{headers}
-        );
-    }elsif ($method =~ /^post/o){
-        $res = $self->furl->post(
-            $args{url},
-            $args{headers},
-            $args{body}
-        );
-    }elsif ($method =~ /^put/o){
+    if ( $method =~ /^get/o ) {
+        $res = $self->furl->get( $args{url}, $args{headers} );
+    }
+    elsif ( $method =~ /^head/o ) {
+        $res = $self->furl->get( $args{url}, $args{headers} );
+    }
+    elsif ( $method =~ /^post/o ) {
+        $res = $self->furl->post( $args{url}, $args{headers}, $args{body} );
+    }
+    elsif ( $method =~ /^put/o ) {
 
-        $res = $self->furl->put(
-            $args{url},
-            $args{headers},
-            $args{body}
-        );
+        $res = $self->furl->put( $args{url}, $args{headers}, $args{body} );
 
-    }elsif ($method =~ /^delete/o){
-        $res = $self->furl->delete(
-            $args{url},
-            $args{headers}
-        );
-    }else{
+    }
+    elsif ( $method =~ /^delete/o ) {
+        $res = $self->furl->delete( $args{url}, $args{headers} );
+    }
+    else {
         Carp::confess "not supported method";
     }
 
     return {
         content => $res->content,
-        headers => {$res->headers->flatten},
+        headers => { $res->headers->flatten },
         status  => $res->status
     };
 }
