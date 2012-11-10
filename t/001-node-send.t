@@ -20,11 +20,11 @@ my $res = $node->send(
     path => '/perl/'
 );
 
+my $current_version = 0;
 is( $res->{name}, 'frutas.txt', 'name ok' );
-ok( $res->{etag},    'etag ok' );
-ok( $res->{version}, 'version ok' );
-
-ok( $res->{content_type}, 'content_type ok' );
+is( $res->{etag}, 'df6c5e71993e312fbfbefa7d81af1977', 'etag ok' );
+ok( $current_version = $res->{version}, 'version ok' );
+is( $res->{content_type}, 'text/plain', 'content_type ok' );
 
 eval { $node->send( file => $Bin . '/../etc/frutas.txt' ) };
 like( $@, qr|sem definir o path|, 'error is ok!' );
@@ -32,10 +32,9 @@ like( $@, qr|sem definir o path|, 'error is ok!' );
 $node->base_path( $Bin . '/../etc' );
 
 $res = $node->send( file => $Bin . '/../etc/frutas.txt' );
-is( $res->{name}, 'frutas.txt', 'name ok' );
-ok( $res->{etag},    'etag ok' );
-ok( $res->{version}, 'version ok' );
-
-ok( $res->{content_type}, 'content_type ok' );
+is( $res->{name},    'frutas.txt',                       'name ok' );
+is( $res->{etag},    'df6c5e71993e312fbfbefa7d81af1977', 'etag ok' );
+is( $res->{version}, $current_version + 1,               'version ok' );
+is( $res->{content_type}, 'text/plain', 'content_type ok' );
 
 done_testing();
