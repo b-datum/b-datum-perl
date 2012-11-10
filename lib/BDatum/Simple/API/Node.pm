@@ -103,11 +103,11 @@ sub send {
 
     close $fh;
 
-    if ($res->{status} != 200 && $res->{status} != 204) {
+    if ( $res->{status} != 200 && $res->{status} != 204 ) {
         return {
-        error => "$res->{status} não esperado!",
-        res   => $res
-      }
+            error => "$res->{status} não esperado!",
+            res   => $res
+        };
     }
 
     return $res if exists $res->{error};
@@ -128,7 +128,7 @@ sub send {
 sub download {
     my ( $self, %params ) = @_;
 
-    my $key = $self->_normalize_key($params{key});
+    my $key = $self->_normalize_key( $params{key} );
     return { error => "404" } unless $key;   # para nao retornar o json do list!
 
     my $param_url = '';
@@ -172,7 +172,7 @@ sub download {
 sub delete {
     my ( $self, %params ) = @_;
 
-    my $key = $self->_normalize_key($params{key});
+    my $key = $self->_normalize_key( $params{key} );
 
     return { error => "404" } unless $key;   # para nao retornar o json do list!
 
@@ -203,12 +203,13 @@ sub delete {
 
 sub list {
     my ( $self, %params ) = @_;
-    my $key = $self->_normalize_key($params{key});
+    my $key = $self->_normalize_key( $params{key} );
 
     if ($key) {
+
         # TODO: Re-avaliar
-        $key =~ s/\/$//;       # tira barras do final
-        $key .= '/';           # certeza que termina com barra no final!
+        $key =~ s/\/$//;    # tira barras do final
+        $key .= '/';        # certeza que termina com barra no final!
     }
 
     my $path_var = $key ? '?path=' . $key : '';
@@ -231,7 +232,7 @@ sub list {
 sub info {
     my ( $self, %params ) = @_;
 
-    my $key = $self->_normalize_key($params{key});
+    my $key = $self->_normalize_key( $params{key} );
 
     return { error => "404" } unless $key;   # para nao retornar o json do list!
 
@@ -255,11 +256,20 @@ sub info {
 }
 
 sub _normalize_key {
-    my ($self, $key) = @_;
+    my ( $self, $key ) = @_;
     return '' unless $key;
-    $key =~ s/^\\/\//g;    # invertendo barras padrão do SO Windows.
+    $key =~ s/\\/\//g;     # invertendo barras padrão do SO Windows.
     $key =~ s/\/+/\//g;    # troca varias barras por uma
     $key =~ s/^\///;       # tira barras do começo
+    return $self->_validate_key($key);
+}
+
+sub _validate_key () {
+    my ( $self, $key ) = @_;
+    croak 'The key must be ^[A-Za-z0-9.-_/]*$ --' . $key
+      unless $key =~ /^[A-Za-z0-9\/\.\-_]*$/;
+    croak 'The length of key cannot be > 980'
+      if length($key) > 980;
     return $key;
 }
 
