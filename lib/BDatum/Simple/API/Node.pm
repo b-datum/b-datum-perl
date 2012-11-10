@@ -27,6 +27,12 @@ has 'node_key' => (
     required => 1
 );
 
+has 'base_url' => (
+    is      => 'ro',
+    isa     => 'Str',
+    default => 'https://api.b-datum.com/storage',
+);
+
 has 'base_path' => (
     is  => 'rw',
     isa => 'Str',
@@ -89,7 +95,7 @@ sub send {
 
     my $res = $self->_http_req(
         method  => 'PUT',
-        url     => 'https://api.b-datum.com/storage/' . $key,
+        url     => join( '/', $self->base_url, $key ),
         headers => [
             $self->_get_headers,
             'content-type' => mimetype( $params{file} ),
@@ -138,7 +144,7 @@ sub download {
 
     my $res = $self->_http_req(
         method  => 'GET',
-        url     => 'https://api.b-datum.com/storage/' . $key . $param_url,
+        url     => join( '/', $self->base_url, $key . $param_url ),
         headers => [ $self->_get_headers ]
     );
 
@@ -182,7 +188,7 @@ sub delete {
 
     my $res = $self->_http_req(
         method  => 'DELETE',
-        url     => 'https://api.b-datum.com/storage/' . $key,
+        url     => join( '/', $self->base_url, $key ),
         headers => [ $self->_get_headers ]
     );
 
@@ -222,7 +228,7 @@ sub list {
 
     my $res = $self->_http_req(
         method  => 'GET',
-        url     => 'https://api.b-datum.com/storage' . $path_var,
+        url     => join( '', $self->base_url, $path_var ),
         headers => [ $self->_get_headers ]
     );
 
@@ -248,7 +254,7 @@ sub info {
 
     my $res = $self->_http_req(
         method  => 'HEAD',
-        url     => 'https://api.b-datum.com/storage/' . $key,
+        url     => join( '/', $self->base_url, $key ),
         headers => [ $self->_get_headers ]
     );
 
