@@ -44,7 +44,7 @@ has furl => (
     isa     => 'Furl',
     default => sub {
         return Furl->new(
-            agent   => 'B-Datum partner',
+            agent   => 'b-datum-perl',
             timeout => 10000
         );
     },
@@ -364,9 +364,9 @@ version 0.1
 
 =head1 DESCRIPTION
 
-Este modulo foi criado para utilizar a interface REST da b-datum de arquivos (API para os pontos)
+Este modulo foi criado para utilizar a interface REST da b-datum para envio e resgate de backups.
 
-Exemplos e casos de uso em <http://docs.b-datum.com/pt/casos-de-uso-e-exemplos/perl.html>
+Exemplos e casos de uso em <http://docs.b-datum.com/>
 
 =head1 AUTHOR
 
