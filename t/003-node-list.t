@@ -4,13 +4,11 @@ use Test::More;
 
 use FindBin qw($Bin);
 
-BEGIN {
-    use_ok('BDatum::Simple::API::Node');
-}
-
 unless ( $ENV{'BDATUM_PATNER_KEY'} and $ENV{'BDATUM_NODE_KEY'} ) {
     plan skip_all => 'Testing this module for real costs money.';
 }
+
+use_ok('BDatum::Simple::API::Node');
 
 my $node = BDatum::Simple::API::Node->new(
     partner_key => $ENV{'BDATUM_PATNER_KEY'},
