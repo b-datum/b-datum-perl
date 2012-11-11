@@ -14,7 +14,7 @@ use Furl;
 use JSON::XS;
 use Encode qw(encode);
 
-has ['partner_key','node_key'] => (
+has [ 'partner_key', 'node_key' ] => (
     is       => 'ro',
     isa      => 'Str',
     required => 1
@@ -48,7 +48,7 @@ sub _builder_furl {
     Furl->new(
         agent   => 'b-datum-perl',
         timeout => 10000
-    )
+    );
 }
 
 sub send {
