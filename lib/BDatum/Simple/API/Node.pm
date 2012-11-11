@@ -277,10 +277,7 @@ sub _http_req {
     my $method = lc $args{method};
     my $res;
 
-    if ( $method =~ /^get/o ) {
-        $res = $self->furl->get( $args{url}, $args{headers} );
-    }
-    elsif ( $method =~ /^head/o ) {
+    if ( $method =~ /^(get|head)/o ) {
         $res = $self->furl->get( $args{url}, $args{headers} );
     }
     elsif ( $method =~ /^post/o ) {
