@@ -117,14 +117,10 @@ sub send {
 
 sub download {
     my ( $self, %params ) = @_;
-
     my $key = $self->_normalize_key( $params{key} );
     return { error => "404" } unless $key;   # para nao retornar o json do list!
 
-    my $param_url = '';
-    if ( $params{version} ) {
-        $param_url .= '?version=' . $params{version};
-    }
+    my $param_url = $params{version} ? '?version=' . $params{version} : '';
 
     my $res = $self->_http_req(
         method  => 'GET',
@@ -132,14 +128,16 @@ sub download {
         headers => [ $self->_get_headers ]
     );
 
-    return { error => "404", res => $res } if $res->{status} == 404;
-    return {
-        error => "$res->{status} não esperado!",
-        res   => $res
-      }
-      if $res->{status} != 200;
-
-    return $res if exists $res->{error};
+    if ( $res->{status} == 404 ) {
+        return { error => "404", res => $res };
+    } elsif ($res->{error}) {
+        return $res;
+    } elsif ( $res->{status} != 200 ) {
+        return {
+            error => "$res->{status} não esperado!",
+            res   => $res
+        }
+    }
 
     if ( $params{file} ) {
         open( my $fh, '>:raw', $params{file} )
@@ -148,30 +146,6 @@ sub download {
         close($fh);
         delete $res->{content};
     }
-    return $self->_make_return_by_response($res);
-}
-
-sub delete {
-    my ( $self, %params ) = @_;
-
-    my $key = $self->_normalize_key( $params{key} );
-
-    return { error => "404" } unless $key;   # para nao retornar o json do list!
-
-    my $res = $self->_http_req(
-        method  => 'DELETE',
-        url     => join( '/', $self->base_url, $key ),
-        headers => [ $self->_get_headers ]
-    );
-
-    return { error => "404", res => $res } if $res->{status} == 404;
-    return {
-        error => "$res->{status} não esperado!",
-        res   => $res
-      }
-      if $res->{status} != 410;
-
-    return $res if exists $res->{error};
 
     return $self->_make_return_by_response($res);
 }
@@ -195,30 +169,50 @@ sub list {
         headers => [ $self->_get_headers ]
     );
 
-    return { error => "404", res => $res } if $res->{status} == 404;
-    return $res if exists $res->{error};
+    if ($res->{status} == 404) {
+        return { error => "404", res => $res };
+    }
+    elsif (exists $res->{error}) {
+        return $res;
+    }
 
     my $obj = eval { decode_json $res->{content} };
     return { error => "$@", res => $res } if $@;
-
     return $obj;
+}
+
+sub delete {
+    my ( $self, %params ) = @_;
+    return $self->_process_method ('DELETE', 410, '', \%params);
 }
 
 sub info {
     my ( $self, %params ) = @_;
+    return $self->_process_method ('HEAD', undef, '', \%params );
+}
 
-    my $key = $self->_normalize_key( $params{key} );
+sub _process_method {
+    my ( $self, $method, $expect_code, $extra_url, $params ) = @_;
 
-    return { error => "404" } unless $key;   # para nao retornar o json do list!
+    my $key = $self->_normalize_key( $params->{key} );
+    return { error => "404" } unless $key;
 
     my $res = $self->_http_req(
-        method  => 'HEAD',
-        url     => join( '/', $self->base_url, $key ),
+        method => $method,
+        url => join( '/', $self->base_url, $key . $extra_url ),
         headers => [ $self->_get_headers ]
     );
 
-    return { error => "404", res => $res } if $res->{status} == 404;
-    return $res if exists $res->{error};
+    if ($res->{status} == 404) {
+        return { error => "404", res => $res };
+    } elsif ( $expect_code and $res->{status} != $expect_code ) {
+        return {
+            error => "$res->{status} não esperado!",
+            res => $res
+        };
+    } elsif ( exists $res->{error} ) {
+        return $res;
+    }
 
     return $self->_make_return_by_response($res);
 }
@@ -243,6 +237,7 @@ sub _make_return_by_response {
         ),
         ( $res->{content} ? ( content => $res->{content} ) : () ),
 
+        # TODO: why ?
         headers => $res->{headers}
     };
 }
