@@ -112,13 +112,7 @@ sub send {
         return $self->info( key => $key );
     }
 
-    return {
-        name         => $res->{headers}{'content-disposition'},
-        content_type => $res->{headers}{'content-type'},
-        version      => $res->{headers}{'x-meta-b-datum-version'},
-        etag         => $res->{headers}{'etag'},
-        headers      => $res->{headers}
-    };
+    return $self->_make_return_by_response($res);
 }
 
 sub download {
@@ -152,17 +146,9 @@ sub download {
           or croak "Cannot open file $params{file} $!";
         print $fh $res->{content};
         close($fh);
+        delete $res->{content};
     }
-    return {
-        name         => $res->{headers}{'content-disposition'},
-        content_type => $res->{headers}{'content-type'},
-        version      => $res->{headers}{'x-meta-b-datum-version'},
-        etag         => $res->{headers}{'etag'},
-        headers      => $res->{headers},
-
-        ( $params{file} ? () : ( content => $res->{content} ) )
-
-    };
+    return $self->_make_return_by_response($res);
 }
 
 sub delete {
@@ -187,14 +173,7 @@ sub delete {
 
     return $res if exists $res->{error};
 
-    return {
-        name         => $res->{headers}{'content-disposition'},
-        content_type => $res->{headers}{'content-type'},
-        version      => $res->{headers}{'x-meta-b-datum-version'},
-        etag         => $res->{headers}{'etag'},
-        deleted      => $res->{headers}{'x-meta-b-datum-delete'},
-        headers      => $res->{headers},
-    };
+    return $self->_make_return_by_response($res);
 }
 
 sub list {
@@ -241,13 +220,30 @@ sub info {
     return { error => "404", res => $res } if $res->{status} == 404;
     return $res if exists $res->{error};
 
+    return $self->_make_return_by_response($res);
+}
+
+sub _make_return_by_response {
+    my ( $self, $res ) = @_;
     return {
         name         => $res->{headers}{'content-disposition'},
         content_type => $res->{headers}{'content-type'},
-        size         => $res->{headers}{'content-length'},
         version      => $res->{headers}{'x-meta-b-datum-version'},
         etag         => $res->{headers}{'etag'},
-        headers      => $res->{headers}
+
+        (
+            $res->{headers}{'content-length'}
+            ? ( size => $res->{headers}{'content-length'} )
+            : ()
+        ),
+        (
+            $res->{headers}{'x-meta-b-datum-delete'}
+            ? ( deleted => $res->{headers}{'x-meta-b-datum-delete'} )
+            : ()
+        ),
+        ( $res->{content} ? ( content => $res->{content} ) : () ),
+
+        headers => $res->{headers}
     };
 }
 
