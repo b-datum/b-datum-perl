@@ -31,6 +31,20 @@ has 'base_path' => (
     isa => 'Str',
 );
 
+
+has '_ca_file' => (
+    is  => 'rw',
+    isa => 'Str',
+    default => sub { $ENV{HTTPS_CA_FILE} || 'sf_bundle.crt' }
+);
+
+has '_ca_path' => (
+    is  => 'rw',
+    isa => 'Str',
+    default => sub { $ENV{HTTPS_CA_DIR} || '' }
+);
+
+
 has 'info_overhead' => (
     is      => 'rw',
     isa     => 'Int',
@@ -45,9 +59,14 @@ has furl => (
 );
 
 sub _builder_furl {
+    my ($self) = @_;
     Furl->new(
         agent   => 'b-datum-perl',
-        timeout => 10000
+        timeout => 10000,
+        ssl_opts => {
+            SSL_ca_file => $self->_ca_file,
+            SSL_ca_path => $self->_ca_path
+        },
     );
 }
 

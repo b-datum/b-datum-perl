@@ -17,8 +17,8 @@ my $node = BDatum::Simple::API::Node->new(
 
 my $res = $node->send(
     file => $Bin . '/../etc/frutas.txt',
-    path => '/perl/'
-);
+    path => '/'
+);use DDP; p $res;exit;
 
 is( $res->{name}, 'frutas.txt', 'name ok' );
 is( $res->{etag}, 'df6c5e71993e312fbfbefa7d81af1977', 'etag ok' );
