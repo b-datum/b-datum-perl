@@ -19,7 +19,7 @@ my $res = $node->send(
     file => $Bin . '/../etc/frutas.txt',
     path => '/perl/'
 );
-
+use DDP; p $res;
 is( $res->{name}, 'frutas.txt', 'name ok' );
 is( $res->{etag}, 'df6c5e71993e312fbfbefa7d81af1977', 'etag ok' );
 ok( $res->{version}, 'version ok' );
