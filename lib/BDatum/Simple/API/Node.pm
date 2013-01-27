@@ -2,7 +2,6 @@ package BDatum::Simple::API::Node;
 
 use utf8;
 use strict;
-
 use Moose;
 use Carp;
 use File::Spec;
@@ -35,7 +34,7 @@ has 'base_path' => (
 has '_ca_file' => (
     is  => 'rw',
     isa => 'Str',
-    default => sub { $ENV{HTTPS_CA_FILE} || 'sf_bundle.crt' }
+    default => sub { $ENV{HTTPS_CA_FILE} || 'etc/sf_bundle.crt' }
 );
 
 has '_ca_path' => (
@@ -60,6 +59,7 @@ has furl => (
 
 sub _builder_furl {
     my ($self) = @_;
+
     Furl->new(
         agent   => 'b-datum-perl',
         timeout => 10000,
