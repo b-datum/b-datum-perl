@@ -107,7 +107,7 @@ sub send {
 
     my $res = $self->_http_req(
         method  => 'PUT',
-        url     => join( '/', $self->base_url, $key ),
+        url     => $self->base_url . '?path='.$key,
         headers => [
             $self->_get_headers,
             'content-type' => mimetype( $params{file} ),
@@ -118,7 +118,7 @@ sub send {
 
     close $fh;
 
-    if ( $res->{status} != 200 && $res->{status} != 204 ) {
+    if ( $res->{status} != 201 && $res->{status} != 204 ) {
         return {
             error => "$res->{status} não esperado!",
             res   => $res
@@ -218,7 +218,7 @@ sub _process_method {
 
     my $res = $self->_http_req(
         method => $method,
-        url => join( '/', $self->base_url, $key . $extra_url ),
+        url => $self->base_url . '?path='.$key.$extra_url ,
         headers => [ $self->_get_headers ]
     );
 
@@ -295,7 +295,7 @@ sub _http_req {
 
     my $method = lc $args{method};
     my $res;
-
+print "$method $args{url}\n";
     if ( $method =~ /^(get|head)/o ) {
         $res = $self->furl->get( $args{url}, $args{headers} );
     }
