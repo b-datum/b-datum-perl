@@ -1,5 +1,5 @@
 package BDatum::Simple::API::Node;
-
+use DateTime;
 use utf8;
 use strict;
 use Moose;
@@ -30,6 +30,11 @@ has 'base_path' => (
     isa => 'Str',
 );
 
+has 'raise_error' => (
+    is  => 'rw',
+    isa => 'Bool',
+    default => '0',
+);
 
 has '_ca_file' => (
     is  => 'rw',
@@ -73,16 +78,16 @@ sub _builder_furl {
 sub send {
     my ( $self, %params ) = @_;
 
-    croak "$params{file} precisa existir" unless -e $params{file};
+    croak "$params{file} must exist and have more than zero byte" unless -e $params{file};
 
     my $key;
     if ( !defined $params{path} ) {
-        croak "Você esta tentando enviar o arquivo sem definir o path"
+        croak "You're trying to send the file without defining the path"
           unless ( defined $self->base_path );
 
         $key = File::Spec->abs2rel( $params{file}, $self->base_path );
         croak
-"Você está enviando o arquivo no caminho correto? $key nao parece ser valido."
+"You are sending the file to the correct path? $key does not seem to be valid."
           if $key =~ /\.\./;
     }
     else {
@@ -91,7 +96,6 @@ sub send {
     }
 
     $key = $self->_normalize_key($key);
-
     open( my $fh, '<:raw', $params{file} );
     my $md5 = Digest::MD5->new->addfile(*$fh)->hexdigest;
     seek( $fh, 0, 0 );
@@ -115,17 +119,18 @@ sub send {
         ],
         body => $fh
     );
-
     close $fh;
 
     if ( $res->{status} != 201 && $res->{status} != 204 ) {
-        return {
-            error => "$res->{status} não esperado!",
+        return $self->_return_error({
+            error =>
+                "$res->{status} ins't expected code (201 or 204)! " .
+                    exists $res->{headers}{'x-b-datum-error'}
+                    ? $res->{headers}{'x-b-datum-error'}
+                    : 'no more information.',
             res   => $res
-        };
+        });
     }
-
-    return $res if exists $res->{error};
 
     if ( $res->{status} == 204 ) {
         return $self->info( key => $key );
@@ -136,26 +141,39 @@ sub send {
 
 sub download {
     my ( $self, %params ) = @_;
-    my $key = $self->_normalize_key( $params{key} );
-    return { error => "404" } unless $key;   # para nao retornar o json do list!
 
-    my $param_url = $params{version} ? '?version=' . $params{version} : '';
+    my $key = $self->_normalize_key( $params{key} );
+    return $self->_return_error({ error => "404" }) unless $key;
+
+    croak "$key looks like a path! remove / in the end to continue." if $key =~ /\/$/;
+
+    $key = "?path=$key";
+
+    my $version = exists $params{version} && $params{version} =~ /^\d+$/
+        ? '&version=' . $params{version}
+        : '';
 
     my $res = $self->_http_req(
         method  => 'GET',
-        url     => join( '/', $self->base_url, $key . $param_url ),
+        url     => join( '/', $self->base_url, $key . $version ),
         headers => [ $self->_get_headers ]
     );
 
+
+    if ( exists $res->{headers}{'x-b-datum-error'} ) {
+        return $self->_return_error({
+            error => $res->{headers}{'x-b-datum-error'},
+            res => $res
+        });
+    }
+
     if ( $res->{status} == 404 ) {
-        return { error => "404", res => $res };
-    } elsif ($res->{error}) {
-        return $res;
+        return $self->_return_error({ error => "404", res => $res });
     } elsif ( $res->{status} != 200 ) {
-        return {
-            error => "$res->{status} não esperado!",
+        return $self->_return_error({
+            error => "Status code $res->{status} is not the expected code (200 OK)",
             res   => $res
-        }
+        });
     }
 
     if ( $params{file} ) {
@@ -171,16 +189,26 @@ sub download {
 
 sub list {
     my ( $self, %params ) = @_;
-    my $key = $self->_normalize_key( $params{key} );
+    my $key = $self->_normalize_key( $params{path} );
 
     if ($key) {
-
         # TODO: Re-avaliar
         $key =~ s/\/$//;    # tira barras do final
         $key .= '/';        # certeza que termina com barra no final!
+    }else{
+        $key = '/';
     }
 
-    my $path_var = $key ? '?path=' . $key : '';
+    my $path_var = '?path=' . $key;
+
+    $params{on} = exists $params{on}
+        ? $params{on} =~ /^\d+$/
+            ? DateTime->from_epoch( epoch => $params{on} )->datetime
+            : ref $params{on} eq 'DateTime'
+                ? $params{on}->datetime
+                : $params{on}
+        : '';
+    $path_var .= '&ts=' . $params{on} if $params{on};
 
     my $res = $self->_http_req(
         method  => 'GET',
@@ -202,42 +230,74 @@ sub list {
 
 sub delete {
     my ( $self, %params ) = @_;
-    return $self->_process_method ('DELETE', 410, '', \%params);
+    return $self->_process_method ('DELETE', [204,410], '', \%params);
 }
 
 sub info {
     my ( $self, %params ) = @_;
-    return $self->_process_method ('HEAD', undef, '', \%params );
+    return $self->_process_method ('HEAD', 200, '', \%params );
 }
 
 sub _process_method {
     my ( $self, $method, $expect_code, $extra_url, $params ) = @_;
-
+    my $x=$params->{key};
     my $key = $self->_normalize_key( $params->{key} );
+
+    my $version = exists $params->{version} && $params->{version} =~ /^\d+$/
+        ? '&version=' . $params->{version}
+        : '';
+
     return { error => "404" } unless $key;
 
     my $res = $self->_http_req(
         method => $method,
-        url => $self->base_url . '?path='.$key.$extra_url ,
+        url => $self->base_url . $extra_url . '?path='.$key.$version,
         headers => [ $self->_get_headers ]
     );
 
-    if ($res->{status} == 404) {
-        return { error => "404", res => $res };
-    } elsif ( $expect_code and $res->{status} != $expect_code ) {
-        return {
-            error => "$res->{status} não esperado!",
+    if ( exists $res->{headers}{'x-b-datum-error'} ) {
+        return $self->_return_error({
+            error => $res->{headers}{'x-b-datum-error'},
             res => $res
-        };
-    } elsif ( exists $res->{error} ) {
-        return $res;
+        });
     }
+
+    $expect_code = $expect_code
+        ? ref $expect_code eq 'ARRAY'
+            ? join (',', @$expect_code)
+            : $expect_code
+        : '';
+    if ($res->{status} == 404) {
+        return $self->_return_error({
+            error => "$key Not Found",
+            res   => $res
+        });
+    } elsif ( $expect_code and $expect_code !~ /$res->{status}/) {
+        return $self->_return_error({
+            error => "Status code $res->{status} não é o esperado, $expect_code!",
+            res => $res
+        });
+    }
+
 
     return $self->_make_return_by_response($res);
 }
 
+
+sub _return_error {
+    my ( $self, $res ) = @_;
+
+    die($res->{error}) if exists $res->{error} && $self->raise_error;
+
+    return $res;
+}
+
 sub _make_return_by_response {
     my ( $self, $res ) = @_;
+
+    die($res->{headers}{'x-b-datum-error'})
+        if exists $res->{headers}{'x-b-datum-error'} && $self->raise_error;
+
     return {
         name         => $res->{headers}{'content-disposition'},
         content_type => $res->{headers}{'content-type'},
@@ -245,19 +305,25 @@ sub _make_return_by_response {
         etag         => $res->{headers}{'etag'},
 
         (
-            $res->{headers}{'content-length'}
+            exists $res->{headers}{'content-length'}
             ? ( size => $res->{headers}{'content-length'} )
             : ()
         ),
         (
-            $res->{headers}{'x-meta-b-datum-delete'}
+            exists $res->{headers}{'x-meta-b-datum-delete'}
             ? ( deleted => $res->{headers}{'x-meta-b-datum-delete'} )
             : ()
         ),
-        ( $res->{content} ? ( content => $res->{content} ) : () ),
+        ( exists $res->{content} ? ( content => $res->{content} ) : () ),
+
+        (
+            exists $res->{headers}{'x-b-datum-error'}
+             ? ( error => $res->{headers}{'x-b-datum-error'} )
+             : ()
+        ),
 
         # TODO: why ?
-        headers => $res->{headers}
+        # headers => $res->{headers}
     };
 }
 
@@ -267,6 +333,8 @@ sub _normalize_key {
     $key =~ s/\\/\//g;     # invertendo barras padrão do SO Windows.
     $key =~ s/\/+/\//g;    # troca varias barras por uma
     $key =~ s/^\///;       # tira barras do começo
+
+    $key = "/$key";
     return $self->_validate_key($key);
 }
 
@@ -295,7 +363,7 @@ sub _http_req {
 
     my $method = lc $args{method};
     my $res;
-print "$method $args{url}\n";
+
     if ( $method =~ /^(get|head)/o ) {
         $res = $self->furl->get( $args{url}, $args{headers} );
     }

@@ -15,12 +15,13 @@ my $node = BDatum::Simple::API::Node->new(
     node_key    => $ENV{'BDATUM_NODE_KEY'}
 );
 
-my $res = $node->delete( key => 'frutas.txt' );
+my $res = $node->delete( key => '/xx/origem.txt' );
+is($res->{size}, undef, 'undef size');
 
-is( $res->{name}, 'frutas.txt', 'name ok' );
-ok( $res->{etag}, 'etag ok' );
-is( $res->{deleted}, 1, 'deleted ok' );
-ok( $res->{version},      'version ok' );
-ok( $res->{content_type}, 'content_type ok' );
+$res = $node->delete( key => '/xx/origem.txt' );
+is($res->{size}, 0, '0 size');
+
+$res = $node->info( key => '/xx/origem.txt');
+like($res->{error}, qr/Not Found/i, 'not found file');
 
 done_testing();

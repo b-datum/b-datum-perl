@@ -17,27 +17,28 @@ my $node = BDatum::Simple::API::Node->new(
 );
 
 my $res = $node->download(
-    key     => 'perl/frutas.txt',
+    key     => '/xx/origem.txt',
     version => 1
 );
 
-is( $res->{name}, 'frutas.txt', 'name ok' );
-ok( $res->{etag},         'etag ok' );
-ok( $res->{version},      'version ok' );
-ok( $res->{content_type}, 'content_type ok' );
+like( $res->{name}, qr/origem.txt/, 'name ok' );
+is( $res->{etag}, 'df6c5e71993e312fbfbefa7d81af1977', 'etag ok' );
+is( $res->{version}, 1, 'version ok' );
+is( $res->{content_type}, 'text/plain', 'content_type ok' );
+my $copy = $res->{content};
 like( $res->{content}, qr|banana|, 'content tem uma fruta!' );
 
 $res = $node->download(
-    key  => 'frutas.txt',
+    key  => '/xx/origem.txt',
     file => $Bin . '/../etc/tmp_test.txt'
 );
 
-is( $res->{name}, 'frutas.txt', 'name ok' );
-ok( $res->{etag},                     'etag ok' );
-ok( $res->{version},                  'version ok' );
-ok( $res->{content_type},             'content_type ok' );
 ok( !exists $res->{content},          'content vazio!' );
 ok( -e $Bin . '/../etc/tmp_test.txt', 'arquivo existe!' );
+
+my $content = do { local $/; open(my $fh, '<:raw', $Bin . '/../etc/tmp_test.txt'); <$fh>};
+
+is($content, $copy, 'download para arquivo e conteudo sao identicos');
 
 unlink( $Bin . '/../etc/tmp_test.txt' );
 

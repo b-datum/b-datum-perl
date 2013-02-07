@@ -15,14 +15,29 @@ my $node = BDatum::Simple::API::Node->new(
     node_key    => $ENV{'BDATUM_NODE_KEY'}
 );
 
-my $res = $node->list();
+my $res = $node->list( path => '/xx' );
 
-ok( $res->{objects}, 'tem objetos' );
-is( $res->{objects}{'frutas.txt'}{type}, 'file', 'frutas.txt presente' );
+if (is( ref $res->{objects},'ARRAY', 'tem objetos de array' )){
+    my $found = 0;
+    foreach my $file (@{$res->{objects}}){
+        next unless $file->{path} eq '/xx/origem.txt';
+        is ($file->{size}, 43, 'size ok');
+        is ($file->{version}, 1, 'version ok');
+        is ($file->{end_ts}, 'infinity', 'end_ts ok');
+        $found++;
+    }
+    is($found, 1, 'arquivo encontrado!');
+}
 
-$res = $node->list( path => '/perl' );
+my @empty;
+push @empty, $node->list( path => '/xx', on => 1095379199 ); # 2004
+push @empty, $node->list( path => '/xx', on => '2010-01-01' );
+push @empty, $node->list( path => '/xx', on => '2010-01-01 01:01:01');
+push @empty, $node->list( path => '/xx', on => DateTime->new(year=>2001) );
 
-ok( $res->{objects}, 'tem objetos' );
-is( $res->{objects}{'frutas.txt'}{type}, 'file', 'frutas.txt presente' );
+for (1..@empty-1){
+    is_deeply($empty[0], $empty[$_], 'lista vazio para datas futuras e antigas');
+}
+
 
 done_testing();
