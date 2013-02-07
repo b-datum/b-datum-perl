@@ -365,7 +365,7 @@ sub _http_req {
     my $res;
 
     if ( $method =~ /^(get|head)/o ) {
-        $res = $self->furl->get( $args{url}, $args{headers} );
+        $res = $self->furl->$1( $args{url}, $args{headers} );
     }
     elsif ( $method =~ /^post/o ) {
         $res = $self->furl->post( $args{url}, $args{headers}, $args{body} );
