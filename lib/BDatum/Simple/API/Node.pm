@@ -242,6 +242,7 @@ sub _process_method {
     my ( $self, $method, $expect_code, $extra_url, $params ) = @_;
     my $x=$params->{key};
     my $key = $self->_normalize_key( $params->{key} );
+    $key =~ s/^\/// if $method eq 'HEAD';
 
     my $version = exists $params->{version} && $params->{version} =~ /^\d+$/
         ? '&version=' . $params->{version}
