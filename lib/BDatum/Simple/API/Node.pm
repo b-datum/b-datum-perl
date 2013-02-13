@@ -105,6 +105,7 @@ sub send {
     if ( -s $params{file} > $self->info_overhead ) {
         my $info = $self->info( key => $key );
 
+        $info->{path} = $key;
         # nao precisa enviar o arquivo
         return $info if ( exists $info->{etag} && $info->{etag} eq $md5 );
     }
@@ -136,7 +137,7 @@ sub send {
         return $self->info( key => $key );
     }
 
-    return $self->_make_return_by_response($res);
+    return $self->_make_return_by_response($res, $key);
 }
 
 sub download {
@@ -147,7 +148,7 @@ sub download {
 
     croak "$key looks like a path! remove / in the end to continue." if $key =~ /\/$/;
 
-    $key = "?path=$key";
+    my $path_key = "?path=$key";
 
     my $version = exists $params{version} && $params{version} =~ /^\d+$/
         ? '&version=' . $params{version}
@@ -155,7 +156,7 @@ sub download {
 
     my $res = $self->_http_req(
         method  => 'GET',
-        url     => join( '/', $self->base_url, $key . $version ),
+        url     => join( '/', $self->base_url, $path_key . $version ),
         headers => [ $self->_get_headers ]
     );
 
@@ -184,7 +185,7 @@ sub download {
         delete $res->{content};
     }
 
-    return $self->_make_return_by_response($res);
+    return $self->_make_return_by_response($res, $key);
 }
 
 sub list {
@@ -192,9 +193,9 @@ sub list {
     my $key = $self->_normalize_key( $params{path} );
 
     if ($key) {
-        # TODO: Re-avaliar
-        $key =~ s/\/$//;    # tira barras do final
-        $key .= '/';        # certeza que termina com barra no final!
+        $key = $self->_normalize_key( $key );
+        # certeza que termina com barra no final, por ser list
+        $key .= '/' unless $key =~ /\/$/;
     }else{
         $key = '/';
     }
@@ -242,7 +243,6 @@ sub _process_method {
     my ( $self, $method, $expect_code, $extra_url, $params ) = @_;
     my $x=$params->{key};
     my $key = $self->_normalize_key( $params->{key} );
-    $key =~ s/^\/// if $method eq 'HEAD';
 
     my $version = exists $params->{version} && $params->{version} =~ /^\d+$/
         ? '&version=' . $params->{version}
@@ -281,7 +281,7 @@ sub _process_method {
     }
 
 
-    return $self->_make_return_by_response($res);
+    return $self->_make_return_by_response($res, $key);
 }
 
 
@@ -294,7 +294,7 @@ sub _return_error {
 }
 
 sub _make_return_by_response {
-    my ( $self, $res ) = @_;
+    my ( $self, $res, $path ) = @_;
 
     die($res->{headers}{'x-b-datum-error'})
         if exists $res->{headers}{'x-b-datum-error'} && $self->raise_error;
@@ -311,6 +311,11 @@ sub _make_return_by_response {
             : ()
         ),
         (
+            exists $res->{headers}{'x-b-datum-size'}
+            ? ( size => $res->{headers}{'x-b-datum-size'} )
+            : ()
+        ),
+        (
             exists $res->{headers}{'x-meta-b-datum-delete'}
             ? ( deleted => $res->{headers}{'x-meta-b-datum-delete'} )
             : ()
@@ -322,6 +327,7 @@ sub _make_return_by_response {
              ? ( error => $res->{headers}{'x-b-datum-error'} )
              : ()
         ),
+        ( $path ? ( path => $path ) : () ),
 
         # TODO: why ?
         # headers => $res->{headers}

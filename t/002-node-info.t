@@ -19,10 +19,9 @@ my $res = $node->info( key => '/xx/origem.txt' );
 
 like( $res->{name}, qr/origem\.txt/, 'header: name' );
 is( $res->{etag}, 'df6c5e71993e312fbfbefa7d81af1977', 'header: tag' );
-TODO: {
-    local $TODO = 'HEAD nao esta retornando o tamanho do arquivo.';
-    is( $res->{size}, '43',                               'header: size' );
-}
+
+is( $res->{size}, '43',                               'header: size' );
+
 is( $res->{content_type}, 'text/plain', 'header: content_type' );
 
 is( $res->{version}, 1, 'header: version');
@@ -38,12 +37,5 @@ like( $res->{error}, qr/not found/i, '404 erro' );
 $res = $node->info( key => '/xx/origem.txt', version => 2);
 like( $res->{error}, qr/not found/i, '404 erro para versao nao existente' );
 
-
-
-SKIP: {
-    skip 'esta listando o contedo da pasta quando envia um HEAD em diretorio, isso eh ok?', 1;
-    $res = $node->info( key => '/' );
-    is( $res->{error}, 404, '404 erro' );
-};
 
 done_testing();

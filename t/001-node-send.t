@@ -19,13 +19,7 @@ my $res = $node->send(
     file => $Bin . '/../etc/origem.txt',
     path => '/xx/'
 );
-
-SKIP: {
-    skip 'Nome esta vindo vazio no primeiro envio', 1;
-
-    like( $res->{name}, qr/frutas\.txt/, 'name ok' );
-};
-
+is( $res->{path}, '/xx/origem.txt', 'sent to correct path');
 is( $res->{etag}, 'df6c5e71993e312fbfbefa7d81af1977', 'etag ok' );
 ok( $res->{version}, 'version ok' );
 is( $res->{content_type}, 'text/plain', 'content_type ok' );
@@ -37,11 +31,7 @@ $node->base_path( $Bin . '/../etc' );
 
 $res = $node->send( file => $Bin . '/../etc/origem.txt' );
 
-SKIP: {
-    skip 'Nome esta vindo vazio no primeiro envio', 1;
-
-    like( $res->{name}, qr/frutas\.txt/, 'name ok' );
-};
+is( $res->{path}, '/origem.txt', 'sent to correct path');
 
 is( $res->{etag}, 'df6c5e71993e312fbfbefa7d81af1977', 'etag ok' );
 ok( $res->{version}, 'version ok' );
