@@ -126,8 +126,8 @@ sub send {
         return $self->_return_error({
             error =>
                 "$res->{status} ins't expected code (201 or 204)! " .
-                    exists $res->{headers}{'x-b-datum-error'}
-                    ? $res->{headers}{'x-b-datum-error'}
+                    exists $res->{headers}{'x-meta-b-datum-error'}
+                    ? $res->{headers}{'x-meta-b-datum-error'}
                     : 'no more information.',
             res   => $res
         });
@@ -161,9 +161,9 @@ sub download {
     );
 
 
-    if ( exists $res->{headers}{'x-b-datum-error'} ) {
+    if ( exists $res->{headers}{'x-meta-b-datum-error'} ) {
         return $self->_return_error({
-            error => $res->{headers}{'x-b-datum-error'},
+            error => $res->{headers}{'x-meta-b-datum-error'},
             res => $res
         });
     }
@@ -256,9 +256,9 @@ sub _process_method {
         headers => [ $self->_get_headers ]
     );
 
-    if ( exists $res->{headers}{'x-b-datum-error'} ) {
+    if ( exists $res->{headers}{'x-meta-b-datum-error'} ) {
         return $self->_return_error({
-            error => $res->{headers}{'x-b-datum-error'},
+            error => $res->{headers}{'x-meta-b-datum-error'},
             res => $res
         });
     }
@@ -296,8 +296,8 @@ sub _return_error {
 sub _make_return_by_response {
     my ( $self, $res, $path ) = @_;
 
-    die($res->{headers}{'x-b-datum-error'})
-        if exists $res->{headers}{'x-b-datum-error'} && $self->raise_error;
+    die($res->{headers}{'x-meta-b-datum-error'})
+        if exists $res->{headers}{'x-meta-b-datum-error'} && $self->raise_error;
 
     return {
         name         => $res->{headers}{'content-disposition'},
@@ -311,8 +311,8 @@ sub _make_return_by_response {
             : ()
         ),
         (
-            exists $res->{headers}{'x-b-datum-size'}
-            ? ( size => $res->{headers}{'x-b-datum-size'} )
+            exists $res->{headers}{'x-meta-b-datum-size'}
+            ? ( size => $res->{headers}{'x-meta-b-datum-size'} )
             : ()
         ),
         (
@@ -323,8 +323,8 @@ sub _make_return_by_response {
         ( exists $res->{content} ? ( content => $res->{content} ) : () ),
 
         (
-            exists $res->{headers}{'x-b-datum-error'}
-             ? ( error => $res->{headers}{'x-b-datum-error'} )
+            exists $res->{headers}{'x-meta-b-datum-error'}
+             ? ( error => $res->{headers}{'x-meta-b-datum-error'} )
              : ()
         ),
         ( $path ? ( path => $path ) : () ),
