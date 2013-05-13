@@ -3,6 +3,8 @@ use DateTime;
 use utf8;
 use strict;
 use Moose;
+extends 'BDatum::Simple::FURL';
+
 use Carp;
 use File::Spec;
 use File::Basename;
@@ -36,44 +38,13 @@ has 'raise_error' => (
     default => '0',
 );
 
-has '_ca_file' => (
-    is  => 'rw',
-    isa => 'Str',
-    default => sub { $ENV{HTTPS_CA_FILE} || 'etc/sf_bundle.crt' }
-);
-
-has '_ca_path' => (
-    is  => 'rw',
-    isa => 'Str',
-    default => sub { $ENV{HTTPS_CA_DIR} || '' }
-);
-
-
 has 'info_overhead' => (
     is      => 'rw',
     isa     => 'Int',
     default => sub { 200 }    # 200 bytes
 );
 
-has furl => (
-    is      => 'rw',
-    lazy    => 1,
-    isa     => 'Furl',
-    builder => '_builder_furl'
-);
 
-sub _builder_furl {
-    my ($self) = @_;
-
-    Furl->new(
-        agent   => 'b-datum-perl',
-        timeout => 10000,
-        ssl_opts => {
-            SSL_ca_file => $self->_ca_file,
-            SSL_ca_path => $self->_ca_path
-        },
-    );
-}
 
 sub send {
     my ( $self, %params ) = @_;
@@ -368,36 +339,7 @@ sub _get_token {
         $self->node_key . ':' . $self->partner_key );
 }
 
-sub _http_req {
-    my ( $self, %args ) = @_;
 
-    my $method = lc $args{method};
-    my $res;
-
-    if ( $method =~ /^(get|head)/o ) {
-        $res = $self->furl->$1( $args{url}, $args{headers} );
-    }
-    elsif ( $method =~ /^post/o ) {
-        $res = $self->furl->post( $args{url}, $args{headers}, $args{body} );
-    }
-    elsif ( $method =~ /^put/o ) {
-
-        $res = $self->furl->put( $args{url}, $args{headers}, $args{body} );
-
-    }
-    elsif ( $method =~ /^delete/o ) {
-        $res = $self->furl->delete( $args{url}, $args{headers} );
-    }
-    else {
-        Carp::confess "not supported method";
-    }
-
-    return {
-        content => $res->content,
-        headers => { $res->headers->flatten },
-        status  => $res->status
-    };
-}
 
 1;
 
