@@ -3,11 +3,12 @@ use DateTime;
 use utf8;
 use strict;
 use Moose;
+extends 'BDatum::Simple::FURL';
 use Carp;
 use File::Spec;
 use File::Basename;
 
-use Furl;
+
 use JSON::XS;
 use Encode qw(encode);
 
@@ -37,37 +38,7 @@ has 'raise_error' => (
     default => '0',
 );
 
-has '_ca_file' => (
-    is  => 'rw',
-    isa => 'Str',
-    default => sub { $ENV{HTTPS_CA_FILE} || 'etc/sf_bundle.crt' }
-);
 
-has '_ca_path' => (
-    is  => 'rw',
-    isa => 'Str',
-    default => sub { $ENV{HTTPS_CA_DIR} || '' }
-);
-
-has furl => (
-    is      => 'rw',
-    lazy    => 1,
-    isa     => 'Furl',
-    builder => '_builder_furl'
-);
-
-sub _builder_furl {
-    my ($self) = @_;
-
-    Furl->new(
-        agent   => 'b-datum-perl',
-        timeout => 10000,
-        ssl_opts => {
-            SSL_ca_file => $self->_ca_file,
-            SSL_ca_path => $self->_ca_path
-        },
-    );
-}
 
 sub login {
     my ( $self ) = @_;
@@ -110,39 +81,6 @@ sub _parse_response {
     return $obj;
 }
 
-
-sub _http_req {
-    my ( $self, %args ) = @_;
-
-    my $method = lc $args{method};
-    my $res;
-
-    if ( $method =~ /^(get|head)/o ) {
-        $res = $self->furl->$1( $args{url}, $args{headers} );
-    }
-    elsif ( $method =~ /^post/o ) {
-        $res = $self->furl->post( $args{url}, $args{headers}, $args{body} );
-    }
-    elsif ( $method =~ /^put/o ) {
-
-        $res = $self->furl->put( $args{url}, $args{headers}, $args{body} );
-
-    }
-    elsif ( $method =~ /^delete/o ) {
-        $res = $self->furl->delete( $args{url}, $args{headers} );
-    }
-    else {
-        Carp::confess "not supported method";
-    }
-
-    return {
-        content => $res->content,
-        headers => { $res->headers->flatten },
-        status  => $res->status
-    };
-}
-
-
 sub _return_error {
     my ( $self, $res ) = @_;
 
@@ -178,39 +116,42 @@ version 0.1
 
 =head1 SYNOPSIS
 
-    use BDatum::Simple::API::Node;
+    use BDatum::Simple::API::Auth;
 
-    my $node = BDatum::Simple::API::Node->new(
-        partner_key => 'XXXXXXXXXXXX',
-        node_key    => 'YYYYYYYYYYYY'
+    my $auth = BDatum::Simple::API::Auth->new(
+        email    => 'your@email.com',
+        password => 'foopass'
     );
 
-    $node->send(
-        file => $Bin . '/../etc/frutas.txt',
-        path => '/'
-    );
+    my $info = $auth->login();
+    # that contains:
+        active         :  1,
+        address        :  undef,
+        advanced_mode  :  0,
+        api_key        :  "some api key here",
+        cidr           :  "0.0.0.0/0",
+        email          :  "your@email.com",
+        first_login    :  1,
+        id             :  8,
+        name           :  "your name",
+        organization_id:  undef, # only if you have
+        partner_key    :  "partner_key",
+        phone_number   :  undef,
+        ts_created     :  "2013-01-30T19:40:22"
 
-    $node->download(
-        key => 'some_file.txt'
-    );
 
-    $node->info(
-        key => 'some_file.txt'
-    );
+    # please only call this after call $auth->login()!
 
-    $node->delete(
-        key => 'some_file.txt'
-    );
+    $auth->user_id(); # get user id
 
-    $node->list(
-        path => '/path/to/somewhere'
-    );
+    $auth->organization_id(); # get organization id
+
+    $auth->api_key(); # get the api_key
+
 
 =head1 DESCRIPTION
 
-Este modulo foi criado para utilizar a interface REST da b-datum para envio e resgate de backups.
-
-Exemplos e casos de uso em <http://docs.b-datum.com/>
+    Class for classic login on api.b-datum.com
 
 =head1 AUTHOR
 

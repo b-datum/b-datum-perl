@@ -25,6 +25,7 @@ $api = BDatum::Simple::API::Auth->new(
     email => 'foo@zz.com',
     password => 'zooo'
 );
+
 $res = $api->login();
 ok( $res->{error}, 'Login invalid');
 
