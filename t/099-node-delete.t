@@ -1,6 +1,10 @@
 use strict;
 use warnings;
 use Test::More;
+use File::Basename;
+my $filename = do { local $/; open my $f, '<', '/tmp/current.name'; <$f>};
+my $basename = basename $filename;
+
 
 use FindBin qw($Bin);
 
@@ -15,13 +19,15 @@ my $node = BDatum::Simple::API::Node->new(
     node_key    => $ENV{'BDATUM_NODE_KEY'}
 );
 
-my $res = $node->delete( key => '/xx/origem.txt' );
+my $res = $node->delete( key => '/xx/' . $basename );
 is($res->{size}, undef, 'undef size');
 
-$res = $node->delete( key => '/xx/origem.txt' );
+$res = $node->delete( key => '/xx/' . $basename);
 is($res->{size}, 0, '0 size');
 
-$res = $node->info( key => '/xx/origem.txt');
+$res = $node->info( key => '/xx/' . $basename);
 like($res->{error}, qr/Not Found/i, 'not found file');
 
+unlink ('/tmp/current.name');
+unlink($filename);
 done_testing();

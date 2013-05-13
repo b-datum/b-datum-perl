@@ -2,6 +2,10 @@ use strict;
 use warnings;
 use Test::More;
 use utf8;
+use File::Basename;
+my $filename = do { local $/; open my $f, '<', '/tmp/current.name'; <$f>};
+my $basename = basename $filename;
+
 
 use FindBin qw($Bin);
 
@@ -17,19 +21,19 @@ my $node = BDatum::Simple::API::Node->new(
 );
 
 my $res = $node->download(
-    key     => '/xx/origem.txt',
+    key     => '/xx/' . $basename,
     version => 1
 );
 
-like( $res->{name}, qr/origem.txt/, 'name ok' );
+like( $res->{name}, qr/$basename/, 'name ok' );
 is( $res->{etag}, 'df6c5e71993e312fbfbefa7d81af1977', 'etag ok' );
 is( $res->{version}, 1, 'version ok' );
-is( $res->{content_type}, 'text/plain', 'content_type ok' );
+is( $res->{content_type}, 'text/plain; charset=UTF-8', 'content_type ok' );
 my $copy = $res->{content};
 like( $res->{content}, qr|banana|, 'content tem uma fruta!' );
 
 $res = $node->download(
-    key  => '/xx/origem.txt',
+    key  => '/xx/'. $basename,
     file => $Bin . '/../etc/tmp_test.txt'
 );
 

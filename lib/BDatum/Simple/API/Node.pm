@@ -122,10 +122,10 @@ sub send {
     );
     close $fh;
 
-    if ( $res->{status} != 201 && $res->{status} != 204 ) {
+    if ( $res->{status} != 201 && $res->{status} != 204 && $res->{status} != 202 ) {
         return $self->_return_error({
             error =>
-                "$res->{status} ins't expected code (201 or 204)! " .
+                "$res->{status} ins't expected code (201 or 204 or 202)! " .
                     exists $res->{headers}{'x-meta-b-datum-error'}
                     ? $res->{headers}{'x-meta-b-datum-error'}
                     : 'no more information.',
@@ -298,6 +298,9 @@ sub _make_return_by_response {
 
     die($res->{headers}{'x-meta-b-datum-error'})
         if exists $res->{headers}{'x-meta-b-datum-error'} && $self->raise_error;
+
+    die($res->{headers}{'x-meta-b-datum-message'})
+        if exists $res->{headers}{'x-meta-b-datum-message'} && $self->raise_error;
 
     return {
         name         => $res->{headers}{'content-disposition'},
