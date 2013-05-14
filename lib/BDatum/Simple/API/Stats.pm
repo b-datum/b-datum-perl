@@ -8,8 +8,8 @@ use BDatum::Simple::API::Auth;
 
 use Carp;
 use File::Spec;
-use URI::QueryParam;
 use URI;
+use URI::QueryParam;
 use File::Basename;
 
 
@@ -29,11 +29,6 @@ has 'days' => (
     default  => sub{ 10 }
 );
 
-has 'base_url' => (
-    is      => 'ro',
-    isa     => 'Str',
-    default => 'https://api.b-datum.com/',
-);
 
 has 'auth' => (
     is      => 'rw',

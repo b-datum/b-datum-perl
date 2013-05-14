@@ -4,7 +4,10 @@ use utf8;
 use strict;
 use Moose;
 extends 'BDatum::Simple::FURL';
+use BDatum::Simple::API::Node;
 use Carp;
+use URI;
+use URI::QueryParam;
 use File::Spec;
 use File::Basename;
 
@@ -29,7 +32,6 @@ has ['api_key','user_id','organization_id'] => (
     isa     => 'Str',
     required => 0,
 );
-
 
 
 has 'raise_error' => (
@@ -97,6 +99,50 @@ sub _return_error {
     };
 }
 
+sub list_nodes {
+    my ( $self, %conf ) = @_;
+
+    my $res = $self->_http_req(
+        method  => 'GET',
+        url     => $self->_uri_for(['node'])
+    );
+    if ( $res->{status} != 200 ) {
+        return $self->_return_error({
+            error => "$res->{status} ins't expected code 200",
+            res   => $res
+        });
+    }
+
+    my $obj = $self->_parse_response($res);
+    return $obj if exists $obj->{error};
+
+    my @nodes = @{$obj->{nodes}};
+    if (exists $conf{as_object} && $conf{as_object}){
+
+        foreach (@nodes){
+            $_ = BDatum::Simple::API::Node->new(
+                %$_,
+                auth => $self
+            );
+        }
+    }
+
+    return wantarray ? @nodes : \@nodes;
+}
+
+sub _uri_for {
+    my ( $self, $parts, $params ) = @_;
+
+    my $url = join '/', $self->base_url, @$parts;
+    $params->{api_key} = $self->api_key;
+
+    my $u = URI->new($url, "http");
+    $u->query_form_hash( $params );
+
+    return $u->as_string;
+}
+
+
 
 1;
 
@@ -142,11 +188,20 @@ version 0.1
 
     # please only call this after call $auth->login()!
 
-    $auth->user_id(); # get user id
+    # get user id
+    $auth->user_id();
 
-    $auth->organization_id(); # get organization id
+    # get organization id, if any
+    $auth->organization_id();
 
-    $auth->api_key(); # get the api_key
+    # get the api_key
+    $auth->api_key();
+
+    # return hash-ref of nodes
+    @nodes = $auth->list_nodes();
+
+    # return BDatum::Simple::API::Node objects
+    @nodes = $auth->list_nodes( as_object => 1 );
 
 
 =head1 DESCRIPTION

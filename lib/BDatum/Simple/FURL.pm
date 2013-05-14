@@ -8,6 +8,12 @@ use Carp;
 use Furl;
 
 
+has 'base_url' => (
+    is      => 'ro',
+    isa     => 'Str',
+    default => 'https://api.b-datum.com/',
+);
+
 has '_ca_file' => (
     is  => 'rw',
     isa => 'Str',
