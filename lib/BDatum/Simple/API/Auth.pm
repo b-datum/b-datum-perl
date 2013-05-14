@@ -108,7 +108,7 @@ __END__
 
 =head1 NAME
 
-BDatum::Simple::API::Node
+BDatum::Simple::API::Auth
 
 =head1 VERSION
 

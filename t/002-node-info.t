@@ -11,9 +11,11 @@ unless ( $ENV{'BDATUM_PARTNER_KEY'} and $ENV{'BDATUM_NODE_KEY'} ) {
     plan skip_all => 'Testing this module for real costs money.';
 }
 
-use_ok('BDatum::Simple::API::Node');
+use_ok('BDatum::Simple::API::Storage');
+diag("waiting the queue process");
+sleep 1;
 
-my $node = BDatum::Simple::API::Node->new(
+my $node = BDatum::Simple::API::Storage->new(
     partner_key => $ENV{'BDATUM_PARTNER_KEY'},
     node_key    => $ENV{'BDATUM_NODE_KEY'}
 );

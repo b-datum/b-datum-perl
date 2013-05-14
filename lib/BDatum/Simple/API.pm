@@ -2,7 +2,7 @@ package BDatum::Simple::API;
 
 our $VERSION = 0.01;
 
-# ABSTRACT: Modulo em perl para utilizar rapidamente a interface REST da b-datum 
+# ABSTRACT: Modulo em perl para utilizar rapidamente a interface REST da b-datum
 
 1;
 
@@ -19,7 +19,7 @@ __END__
 
 Namespace para as API com a b-datum.
 
-Modulos: L<BDatum::Simple::API::Node> para interagir com pontos e os arquivos.
+Modulos: L<BDatum::Simple::API> para interagir com pontos e os arquivos.
 
 =head1 SEE ALSO
 

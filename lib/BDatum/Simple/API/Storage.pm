@@ -1,4 +1,4 @@
-package BDatum::Simple::API::Node;
+package BDatum::Simple::API::Storage;
 use DateTime;
 use utf8;
 use strict;
@@ -351,7 +351,7 @@ __END__
 
 =head1 NAME
 
-BDatum::Simple::API::Node
+BDatum::Simple::API::Storage
 
 =head1 VERSION
 
@@ -359,9 +359,9 @@ version 0.1
 
 =head1 SYNOPSIS
 
-    use BDatum::Simple::API::Node;
+    use BDatum::Simple::API::Storage;
 
-    my $node = BDatum::Simple::API::Node->new(
+    my $node = BDatum::Simple::API::Storage->new(
         partner_key => 'XXXXXXXXXXXX',
         node_key    => 'YYYYYYYYYYYY'
     );
