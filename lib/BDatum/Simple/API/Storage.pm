@@ -131,7 +131,6 @@ sub download {
         headers => [ $self->_get_headers ]
     );
 
-
     if ( exists $res->{headers}{'x-meta-b-datum-error'} ) {
         return $self->_return_error({
             error => $res->{headers}{'x-meta-b-datum-error'},
@@ -156,7 +155,16 @@ sub download {
         delete $res->{content};
     }
 
-    return $self->_make_return_by_response($res, $key);
+    my $bitmore = $self->info(%params);
+
+    my $def = $self->_make_return_by_response($res, $key);
+
+    return {
+        %$def,
+        version => $bitmore->{version},
+        etag => $bitmore->{etag},
+
+    }
 }
 
 sub list {
@@ -178,9 +186,12 @@ sub list {
             ? DateTime->from_epoch( epoch => $params{on} )->datetime
             : ref $params{on} eq 'DateTime'
                 ? $params{on}->datetime
-                : $params{on}
+                : $params{on} =~ /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/
+                    ? $params{on}
+                    : die "'$params{on}' is invalid in a format DateTime format. Please use YYYY-MM-DDTMM:MN:SS"
         : '';
     $path_var .= '&ts=' . $params{on} if $params{on};
+
 
     my $res = $self->_http_req(
         method  => 'GET',
@@ -189,7 +200,7 @@ sub list {
     );
 
     if ($res->{status} == 404) {
-        return { error => "404", res => $res };
+        return {objects => []}; # included 2013-12-26
     }
     elsif (exists $res->{error}) {
         return $res;

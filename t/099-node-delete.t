@@ -20,10 +20,12 @@ my $node = BDatum::Simple::API::Storage->new(
 );
 
 my $res = $node->delete( key => '/xx/' . $basename );
+
 is($res->{size}, undef, 'undef size');
 
 $res = $node->delete( key => '/xx/' . $basename);
-is($res->{size}, 0, '0 size');
+
+is($res->{size}, undef, 'undef size');
 
 $res = $node->info( key => '/xx/' . $basename);
 like($res->{error}, qr/Not Found/i, 'not found file');

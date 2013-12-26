@@ -22,8 +22,13 @@ my $res = $node->list( path => '/xx' );
 
 if (is( ref $res->{objects},'ARRAY', 'tem objetos de array' )){
     my $found = 0;
+
+
     foreach my $file (@{$res->{objects}}){
         next unless $file->{path} eq '/xx/' . $basename;
+
+
+
         is ($file->{size}, 43, 'size ok');
         is ($file->{version}, 1, 'version ok');
         #is ($file->{end_ts}, 'infinity', 'end_ts ok');
@@ -34,8 +39,11 @@ if (is( ref $res->{objects},'ARRAY', 'tem objetos de array' )){
 
 my @empty;
 push @empty, $node->list( path => '/xx', on => 1095379199 ); # 2004
-push @empty, $node->list( path => '/xx', on => '2010-01-01' );
-push @empty, $node->list( path => '/xx', on => '2010-01-01 01:01:01');
+eval{
+    $node->list( path => '/xx', on => '2010-01-01' );
+};
+ok($@);
+push @empty, $node->list( path => '/xx', on => '2010-01-01T01:01:01');
 push @empty, $node->list( path => '/xx', on => DateTime->new(year=>2001) );
 
 for (1..@empty-1){
