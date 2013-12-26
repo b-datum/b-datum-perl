@@ -93,6 +93,8 @@ sub send {
     );
     close $fh;
 
+    return { error => 'Authorization required.'} if ($res->{status} == 401);
+
     if ( $res->{status} != 201 && $res->{status} != 204 && $res->{status} != 202 ) {
         return $self->_return_error({
             error =>
@@ -201,6 +203,8 @@ sub list {
 
     if ($res->{status} == 404) {
         return {objects => []}; # included 2013-12-26
+    }elsif ($res->{status} == 401) {
+        return { error => 'Authorization required.'};
     }
     elsif (exists $res->{error}) {
         return $res;
@@ -255,6 +259,8 @@ sub _process_method {
             error => "$key Not Found",
             res   => $res
         });
+    }elsif ($res->{status} == 401) {
+        return { error => 'Authorization required.'};
     } elsif ( $expect_code and $expect_code !~ /$res->{status}/) {
         return $self->_return_error({
             error => "Status code $res->{status} não é o esperado, $expect_code!",
